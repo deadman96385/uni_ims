@@ -160,6 +160,8 @@ public class ImsService extends Service {
 
     public static final int IMS_HANDOVER_ACTION_CONFIRMED = 999;
 
+    public static final int IMS_INVALID_SERVICE_ID = -1;  // UNISOC: Add for bug950573
+
     class ImsHandoverType {
         public static final int IDEL_HANDOVER_TO_VOWIFI = 1;
         public static final int IDEL_HANDOVER_TO_VOLTE = 2;
@@ -235,7 +237,6 @@ public class ImsService extends Service {
     private Object mRequestLock = new Object();
     private IImsServiceListenerEx mImsServiceListenerEx;
 
-    private int mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
     private int mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
     private TelephonyManager mTelephonyManager;
     // add for Dual LTE
@@ -277,7 +278,7 @@ public class ImsService extends Service {
     private int mInCallPhoneId = -1;
     private NotificationChannel mVowifiChannel;
     private int mMakeCallPrimaryCardServiceId = -1;
-    private int mVowifiReisteredServiceId = -1;
+    private int mVowifiAttachedServiceId = IMS_INVALID_SERVICE_ID; // UNISOC: Add for bug950573
     private class ImsServiceRequest {
         public int mRequestId;
         public int mEventCode;
@@ -389,6 +390,8 @@ public class ImsService extends Service {
                                         + mAttachVowifiSuccess);
                         if (mFeatureSwitchRequest != null) {
                             notifyCPVowifiAttachSucceed();
+                            mVowifiAttachedServiceId = mFeatureSwitchRequest.mServiceId;    //UNISOC:add for bug950573
+
                             if (mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER) {
                                 /* SPRD: Modify for bug595321 and 610503{@ */
                                 if (mIsCalling) {
@@ -410,8 +413,8 @@ public class ImsService extends Service {
                                         service.enableWiFiParamReport();
                                     }
                                 } else {
+                                    mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;  // UNISOC: Add for bug950573
                                     updateImsFeature(mFeatureSwitchRequest.mServiceId);
-                                    mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
                                     if (mImsServiceListenerEx != null) {
                                         Log.i(TAG,
                                                 "EVENT_WIFI_ATTACH_SUCCESSED -> operationSuccessed -> IMS_OPERATION_HANDOVER_TO_VOWIFI");
@@ -423,7 +426,9 @@ public class ImsService extends Service {
                                     if (mWifiService != null
                                             && !mPendingVowifiHandoverVowifiSuccess) {
                                         mWifiService.register();
+                                        mIsLoggingIn = true;  // SPRD:Add for bug950573
                                     }
+                                    mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;  // UNISOC: Add for bug950573
                                     mPendingAttachVowifiSuccess = false;
                                     mWifiService
                                             .updateCallRatState(CallRatState.CALL_NONE);
@@ -431,8 +436,8 @@ public class ImsService extends Service {
                                 Log.i(TAG,
                                         "EVENT_WIFI_ATTACH_SUCCESSED ->mFeatureSwitchRequest.mEventCode:"
                                                 + mFeatureSwitchRequest.mEventCode
-                                                + " mCurrentImsFeature:"
-                                                + mCurrentImsFeature
+                                                + " currentImsFeature:"
+                                                + getImsFeature(mFeatureSwitchRequest.mServiceId)    // UNISOC: Modify for bug950573
                                                 + " mIsCalling:" + mIsCalling
                                                 + " mIsVowifiCall:" + mIsVowifiCall
                                                 + " mIsVolteCall:" + mIsVolteCall
@@ -489,7 +494,7 @@ public class ImsService extends Service {
                         mAttachVowifiSuccess = false;// SPRD:Add for bug604833
                         // SPRD:add for bug720289
                         if (mIsCalling
-                                && mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI) {
+                                && mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) { // UNISOC: Modify for bug950573
                             Log.i(TAG,
                                     "EVENT_WIFI_ATTACH_FAILED-> handover to vowifi attach failed, set mInCallHandoverFeature unknow");
                             mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
@@ -531,6 +536,7 @@ public class ImsService extends Service {
                                             .get(Integer
                                                     .valueOf(mFeatureSwitchRequest.mServiceId));
                                     if (currentService != null) {
+                                        int currentImsFeature = currentService.getCurrentImsFeature(); // UNISOC: Add for bug950573
                                         if (currentService
                                                 .isVolteSessionListEmpty()
                                                 && currentService
@@ -569,16 +575,16 @@ public class ImsService extends Service {
                                                         .updateCallRatState(CallRatState.CALL_NONE);
                                             }
                                             if (mIsVowifiCall
-                                                    && mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
+                                                    && currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
                                                     && mFeatureSwitchRequest != null
                                                     && !mPendingAttachVowifiSuccess
                                                     && !mPendingActivePdnSuccess) {
                                                 mFeatureSwitchRequest = null;
                                             }
-                                            if (mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN) {
+                                            if (currentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN) {
                                                 Log.i(TAG,
-                                                        "EVENT_WIFI_ALL_CALLS_END->mCurrentImsFeature:"
-                                                                + mCurrentImsFeature);
+                                                        "EVENT_WIFI_ALL_CALLS_END->currentImsFeature:"
+                                                                + currentImsFeature);
                                                 updateInCallState(false);
                                             }
                                         }
@@ -593,12 +599,13 @@ public class ImsService extends Service {
                                         .get(Integer.valueOf(ImsRegister
                                                 .getPrimaryCard(mPhoneCount) + 1));
                                 if (currentService != null) {
+                                    int currentImsFeature = currentService.getCurrentImsFeature(); // UNISOC: Add for bug950573
                                     if (currentService.isVolteSessionListEmpty()
                                             && currentService
                                                     .isVowifiSessionListEmpty()) {
                                         Log.i(TAG,
-                                                "EVENT_WIFI_ALL_CALLS_END->mCurrentImsFeature:"
-                                                        + mCurrentImsFeature);
+                                                "EVENT_WIFI_ALL_CALLS_END->currentImsFeature:"
+                                                        + currentImsFeature);
                                         updateInCallState(false);
                                         mCallEndType = CallEndEvent.WIFI_CALL_END;
                                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
@@ -640,10 +647,18 @@ public class ImsService extends Service {
                                         + mFeatureSwitchRequest + " mIsLoggingIn:"
                                         + mIsLoggingIn);
                         mWifiRegistered = result.booleanValue();
-                        mVowifiReisteredServiceId = Integer
-                                .valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1);//UNISOC:add for bug947058
+
+                        /* UNISOC: Add for bug950573 @{*/
+                        int VoWifiServiceId = getVoWifiServiceId();
+                        if(VoWifiServiceId == IMS_INVALID_SERVICE_ID)
+                        {
+                            VoWifiServiceId = ImsRegister.getPrimaryCard(mPhoneCount) + 1;
+                            Log.i(TAG,"EVENT_WIFI_REGISTER_RESAULT, use main sim serviceId: " + VoWifiServiceId);
+                        }
+                        /*@}*/
+
                         mIsLoggingIn = false;
-                        updateImsFeature();
+                        updateImsFeature(VoWifiServiceId); // UNISOC: Modify for bug950573
                         if (mFeatureSwitchRequest != null) {
                             ImsServiceImpl requestService = mImsServiceImplMap
                                     .get(Integer
@@ -718,10 +733,18 @@ public class ImsService extends Service {
                             Log.w(TAG,
                                     "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> mReleaseVowifiRequest is exist!");
                         } else {
+                            /* UNISOC: Add for bug950573 @{*/
+                            int vowifiServiceId = getVoWifiServiceId();
+                            if (vowifiServiceId == IMS_INVALID_SERVICE_ID) {
+                                vowifiServiceId = ImsRegister.getPrimaryCard(mPhoneCount) + 1;
+                                Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE, use main sim serviceId: " + vowifiServiceId);
+                            }
+                            /*@}*/
+
                             mReleaseVowifiRequest = new ImsServiceRequest(
                                     msg.arg1/* requestId */,
                                     ACTION_NOTIFY_VOWIFI_UNAVAILABLE /* eventCode */,
-                                    ImsRegister.getPrimaryCard(mPhoneCount) + 1/* serviceId */,
+                                    vowifiServiceId /* serviceId */,                    // UNISOC: Modify for bug950573
                                     ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE);
 
                             if (!isOnlySendAT) {
@@ -756,19 +779,15 @@ public class ImsService extends Service {
                                     "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> wifi state: "
                                             + msg.arg2);
 
-                            //UNISOC: modify by bug947058
-                            for(int i = 1;i<=mImsServiceImplMap.size();i++){
-
-                                ImsServiceImpl imsService = mImsServiceImplMap.get(i);
-                                if (imsService != null && mVowifiReisteredServiceId == i) {
-                                    imsService.notifyVoWifiEnable(false);
-                                    mPendingCPSelfManagement = true;
-                                    Log.i(TAG,
-                                            "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:"
-                                                    + mPendingCPSelfManagement);
-                                }
+                            //UNISOC: modify by bug947058, bug950573
+                            ImsServiceImpl imsService = mImsServiceImplMap.get(new Integer(vowifiServiceId));
+                            if (imsService != null) {
+                                imsService.notifyVoWifiEnable(false);
+                                mPendingCPSelfManagement = true;
+                                Log.i(TAG,
+                                        "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:"
+                                                + mPendingCPSelfManagement);
                             }
-
 
                             if (mFeatureSwitchRequest != null) {
                                 mFeatureSwitchRequest = null;
@@ -797,6 +816,7 @@ public class ImsService extends Service {
                         int errorCode = msg.arg2;
                         if (releaseResult == ImsStackResetResult.SUCCESS) {
                             mWifiRegistered = false;
+                            mVowifiAttachedServiceId = IMS_INVALID_SERVICE_ID;  // UNISOC: Add for bug950573
                             updateImsFeatureForAllService();// SPRD:Add for bug816979
                         }
                         if (mReleaseVowifiRequest != null) {
@@ -844,10 +864,19 @@ public class ImsService extends Service {
                             if (mWifiService != null) {
                                 mWifiService.resetAll(WifiState.DISCONNECTED);
                             }
+
+                            /* UNISOC: Add for bug950573 @{*/
+                            int vowifiServiceId = getVoWifiServiceId();
+                            if (vowifiServiceId == IMS_INVALID_SERVICE_ID) {
+                                vowifiServiceId = ImsRegister.getPrimaryCard(mPhoneCount) + 1;
+                                Log.i(TAG,"ACTION_RELEASE_WIFI_RESOURCE, use main sim serviceId: " + vowifiServiceId);
+                            }
+                            /*@}*/
+
                             mReleaseVowifiRequest = new ImsServiceRequest(
                                     msg.arg1/* requestId */,
                                     ACTION_RELEASE_WIFI_RESOURCE /* eventCode */,
-                                    ImsRegister.getPrimaryCard(mPhoneCount) + 1/* serviceId */,
+                                    vowifiServiceId /* serviceId */, // UNISOC: Modify for bug950573
                                     ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE);
                             Log.w(TAG,
                                     "ACTION_RELEASE_WIFI_RESOURCE-> wifi state: DISCONNECTED");
@@ -877,7 +906,7 @@ public class ImsService extends Service {
                                 mReleaseVowifiRequest = new ImsServiceRequest(
                                         msg.arg1/* requestId */,
                                         ImsOperationType.IMS_OPERATION_CANCEL_CURRENT_REQUEST /* eventCode */,
-                                        ImsRegister.getPrimaryCard(mPhoneCount) + 1/* serviceId */,
+                                        mFeatureSwitchRequest.mServiceId /* serviceId */,  // UNISOC: Modify for bug950573
                                         ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE);
                             }
                             mWifiService.resetAll(WifiState.DISCONNECTED /*
@@ -887,8 +916,7 @@ public class ImsService extends Service {
                                                                           */);
                             /* SPRD: Modify for bug604833{@ */
                             ImsServiceImpl imsService = mImsServiceImplMap
-                                    .get(Integer.valueOf(ImsRegister
-                                            .getPrimaryCard(mPhoneCount) + 1));
+                                    .get(Integer.valueOf(mFeatureSwitchRequest.mServiceId));  // UNISOC: Modify for bug950573
                             if (mFeatureSwitchRequest.mEventCode == ACTION_SWITCH_IMS_FEATURE
                                     && mAttachVowifiSuccess) {
                                 if (imsService != null) {
@@ -966,8 +994,9 @@ public class ImsService extends Service {
                                 && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER
                                 && (msg.arg1 == UnsolicitedCode.SECURITY_DPD_DISCONNECTED
                                         || msg.arg1 == UnsolicitedCode.SECURITY_REKEY_FAILED || msg.arg1 == UnsolicitedCode.SECURITY_STOP)) {
+                            int currentImsFeature = getImsFeature(mFeatureSwitchRequest.mServiceId);  // UNISOC: Add for bug950573
                             if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE
-                                    && mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE
+                                    && currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE
                                     && msg.arg1 == UnsolicitedCode.SECURITY_STOP) {
                                 if (mIsS2bStopped && mPendingReregister) {
                                     if (mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN) {
@@ -1017,10 +1046,11 @@ public class ImsService extends Service {
                             ImsServiceImpl imsService = mImsServiceImplMap
                                     .get(Integer
                                             .valueOf(mFeatureSwitchRequest.mServiceId));
+                            int currentImsFeature = getImsFeature(mFeatureSwitchRequest.mServiceId); // UNISOC: Add for bug950573
                             if (mIsVolteCall || mPendingVolteHandoverVolteSuccess) {
                                 if (mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER
                                         && mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE
-                                        && mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) {
+                                        && currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) {
                                     if (mIsS2bStopped) {
                                         Log.i(TAG,
                                                 "EVENT_UPDATE_DATA_ROUTER_FINISHED->notifyDataRouter");
@@ -1035,7 +1065,7 @@ public class ImsService extends Service {
                                                     + mPendingReregister);
                                 } else if (mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER
                                         && mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
-                                        && mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
+                                        && currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
                                     int type = 6;
                                     StringBuffer info = new StringBuffer();
                                     WifiInfo wifiInfo;
@@ -1074,7 +1104,7 @@ public class ImsService extends Service {
                                     || mPendingVowifiHandoverVowifiSuccess) {
                                 if (mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER
                                         && mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE
-                                        && mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) {
+                                        && currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) {
                                     Log.i(TAG,
                                             "EVENT_UPDATE_DATA_ROUTER_FINISHED->reRegister->type: "
                                                     + mNetworkType + " info:"
@@ -1092,7 +1122,7 @@ public class ImsService extends Service {
                                                     + mPendingReregister);
                                 } else if (mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER
                                         && mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
-                                        && mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
+                                        && currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
                                     int type = -1;// SPRD:"-1" means
                                                   // "EN_MTC_ACC_NET_IEEE_802_11"
                                     StringBuffer info = new StringBuffer();
@@ -1645,17 +1675,37 @@ public class ImsService extends Service {
                     .sendToTarget();
         }
 
+        /* UNISOC: Modify for bug950573 @{*/
         /**
-         * Used for get IMS feature.
-         * 
+         * Used for get IMS feature for main sim card.
+         *
          * @return: ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN = -1;
          *          ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE = 0;
          *          ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI = 2;
          */
         @Override
         public int getCurrentImsFeature() {
-            return mCurrentImsFeature;
+            int currentImsFeature = getPrimaryCardImsFeature();
+            return currentImsFeature;
         }
+        /*@}*/
+
+        /* UNISOC: Add for bug950573 @{*/
+        /**
+         * Used for get IMS feature for specific sim card.
+         *
+         * @param: phoneId:  phoneId to get currentImsFeature
+         * @return: ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN = -1;
+         *          ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE = 0;
+         *          ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI = 2;
+         */
+
+        @Override
+        public int getCurrentImsFeatureForPhone(int phoneId) {
+            int currentImsFeature = getImsFeature(phoneId + 1);
+            return currentImsFeature;
+        }
+        /*@}*/
 
         /**
          * Used for set IMS service listener.
@@ -2132,8 +2182,9 @@ public class ImsService extends Service {
     };
 
     private void notifyListenerWhenRegister(IImsRegisterListener listener){
-        boolean isImsRegistered = ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
-                || (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
+        int currentImsFeature = getPrimaryCardImsFeature(); // UNISOC: Add for bug950573
+        boolean isImsRegistered = ((currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
+                || (currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
         //SPRD: add for bug 823104
         if(ImsManagerEx.isDualLteModem()){
             isImsRegistered  = isImsRegistered || mVolteRegistered;
@@ -2150,8 +2201,9 @@ public class ImsService extends Service {
 
     public void notifyImsRegisterState() {
         updateImsRegisterState();
-        boolean isImsRegistered = ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
-                || (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
+        int currentImsFeature = getPrimaryCardImsFeature(); // UNISOC: Add for bug950573
+        boolean isImsRegistered = ((currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
+                || (currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
         //SPRD: add for bug 771875
         if(ImsManagerEx.isDualLteModem()){
             isImsRegistered  = isImsRegistered || mVolteRegistered;
@@ -2434,8 +2486,9 @@ public class ImsService extends Service {
                         mIsPendingRegisterVolte = false;
                     }
                 }
-                Log.i(TAG, "VoLTERegisterListener-> mCurrentImsFeature:"
-                        + mCurrentImsFeature + "serviceId:" + serviceId
+                int currentImsFeature = getImsFeature(serviceId); // UNISOC: Add for bug950573
+                Log.i(TAG, "VoLTERegisterListener-> currentImsFeature:"
+                        + currentImsFeature + "serviceId:" + serviceId
                         + " service is null:" + (service == null) + " service:"
                         + (service == null ? false : service.isImsRegistered()));
             } catch (RemoteException e) {
@@ -2499,9 +2552,10 @@ public class ImsService extends Service {
                                         "onSessionEmpty-> This is volte call,so mFeatureSwitchRequest has been emptyed.");
                             }
                         }
-                        if (mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN) {
-                            Log.i(TAG, "onSessionEmpty->mCurrentImsFeature:"
-                                    + mCurrentImsFeature);
+                        int currentImsFeature = getImsFeature(serviceId); // UNISOC: Add for bug950573
+                        if (currentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN) {
+                            Log.i(TAG, "onSessionEmpty->currentImsFeature:"
+                                    + currentImsFeature);
                             updateInCallState(false);
                         }
                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
@@ -2543,15 +2597,18 @@ public class ImsService extends Service {
     }
 
     public boolean isImsEnabled() {
-        return (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE || mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI);
+        int currentImsFeature = getPrimaryCardImsFeature(); // UNISOC: Add for bug950573
+        return (currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE || currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI);
     }
 
     public boolean isVoWifiEnabled() {
-        return (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI);
+        int currentImsFeature = getPrimaryCardImsFeature(); // UNISOC: Add for bug950573
+        return (currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI);
     }
 
     public boolean isVoLTEEnabled() {
-        return (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE);
+        int currentImsFeature = getPrimaryCardImsFeature(); // UNISOC: Add for bug950573
+        return (currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE);
     }
 
     public void updateImsFeature() {
@@ -2598,16 +2655,28 @@ public class ImsService extends Service {
                 .valueOf(serviceId));
         boolean isPrimaryCard = ImsRegister.getPrimaryCard(mPhoneCount) == (serviceId-1);
         boolean volteRegistered = (imsService != null) ? imsService.isImsRegisterState() : false;
+        int     currentImsFeature;   // UNISOC: Add for bug950573
         Log.i(TAG,"updateImsFeature --> isPrimaryCard = " + ImsRegister.getPrimaryCard(mPhoneCount) + " | serviceId-1 = " + (serviceId-1)
             +" volteRegistered:"+volteRegistered +" getLTECapabilityForPhone:"+getLTECapabilityForPhone(serviceId - 1));
 
-        //SPRD: add for bug947058
-        if (ImsRegister.getPrimaryCard(mPhoneCount) + 1 != mVowifiReisteredServiceId && mWifiRegistered) {
-            Log.i(TAG, "updateImsFeature primaryCard is not same as Vowifi registered Card, not update. mVowifiReisteredServiceId = " + mVowifiReisteredServiceId);
+        //SPRD: add for bug947058,modify for bug950573
+        int vowifiServiceId = getVoWifiServiceId();
+        if ((vowifiServiceId != IMS_INVALID_SERVICE_ID) && (vowifiServiceId != (ImsRegister.getPrimaryCard(mPhoneCount) + 1))) {
+            Log.i(TAG, "updateImsFeature primaryCard is not same as Vowifi service Card, not update. vowifiServiceId = " + vowifiServiceId);
             return;
         }
 
         if (!isPrimaryCard && imsService != null) {
+
+            /* UNISOC: Add for bug950573 @{*/
+            if (volteRegistered) {
+                currentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
+            } else {
+                currentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+            }
+            setCurrentImsFeature(serviceId, currentImsFeature); // UNISOC: Add for bug950573
+            /*@}*/
+
             if(ImsManagerEx.isDualVoLTEActive() || getLTECapabilityForPhone(serviceId - 1)) {
                 imsService.updateImsFeatures(volteRegistered, false);
                 imsService.notifyImsRegister(volteRegistered,false, false); // UNISOC: Modify for bug880865
@@ -2620,22 +2689,22 @@ public class ImsService extends Service {
             return;
         }
         updateImsRegisterState();
-        int oldImsFeature = mCurrentImsFeature;// SPRD:add for bug673215
+        int oldImsFeature = getImsFeature(serviceId);// SPRD:add for bug673215,bug950573
         boolean isImsRegistered = false;
         if (mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN) {
             if (mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
-                mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
+                currentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
                 isImsRegistered = true;
             } else if (imsService != null
                     && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED) {
-                mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                currentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                 isImsRegistered = false;
             } else {
-                mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
+                currentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
                 isImsRegistered = true;
             }
         } else if (volteRegistered) {
-            mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
+            currentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
             /*
              * SPRD: Bug 667760 If dual volte avtive, need to notify ims state according serviceId.
              */
@@ -2648,34 +2717,35 @@ public class ImsService extends Service {
             }
             /* @} */
         } else if (mWifiRegistered) {
-            mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
+            currentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
             if(ImsRegister.getPrimaryCard(mPhoneCount) == (serviceId-1)) {
                 isImsRegistered = true;
             }
         } else {
-            mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+            currentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
             isImsRegistered = false;
         }
         if (imsService != null) {
+            imsService.setCurrentImsFeature(currentImsFeature); // UNISOC: Add for bug950573
             imsService
                     .updateImsFeatures(
-                            mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE,
-                            mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI);
+                            currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE,
+                            currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI);
 
             // SPRD: add for bug671964
-            if (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
+            if (currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
                 if (mWifiService != null) {
                     String addr = mWifiService.getCurPcscfAddress();
                     imsService.setImsPcscfAddress(addr);
                 }
             }
-            imsService.notifyImsRegister(isImsRegistered, mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE, mWifiRegistered); // UNISOC: Modify for bug880865
+            imsService.notifyImsRegister(isImsRegistered, currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE, mWifiRegistered); // UNISOC: Modify for bug880865
             notifyImsRegisterState();
         }
 
         // SPRD:add for bug673215
-        if (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
-                && oldImsFeature != mCurrentImsFeature) {
+        if (currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
+                && oldImsFeature != currentImsFeature) {
             ImsVodafoneHelper.getInstance(getApplicationContext())
                     .showVowifiRegisterToast(getApplicationContext());
 
@@ -2684,7 +2754,7 @@ public class ImsService extends Service {
         Log.i(TAG, "updateImsFeature->mWifiRegistered:" + mWifiRegistered
                 + " volteRegistered:" + volteRegistered
                 + " oldImsFeature:"+oldImsFeature
-                + " mCurrentImsFeature:" + mCurrentImsFeature
+                + " currentImsFeature:" + currentImsFeature
                 + " mInCallHandoverFeature:" + mInCallHandoverFeature
                 + " serviceId:" + serviceId);
     }
@@ -2702,9 +2772,10 @@ public class ImsService extends Service {
 
     public void onReceiveHandoverEvent(boolean isCalling, int requestId,
             int targetType) {
+        int currentImsFeature = getPrimaryCardImsFeature(); // UNISOC: Add for bug950573
         Log.i(TAG, "onReceiveHandoverEvent->isCalling:" + isCalling
                 + " requestId:" + requestId + " targetType:" + targetType
-                + " mCurrentImsFeature:" + mCurrentImsFeature
+                + " currentImsFeature:" + currentImsFeature
                 + " mPendingActivePdnSuccess:" + mPendingActivePdnSuccess
                 + " mPendingAttachVowifiSuccess:" + mPendingAttachVowifiSuccess);
         if (!mIsCalling && mPendingActivePdnSuccess) {
@@ -2953,7 +3024,7 @@ public class ImsService extends Service {
                         }
                     }
                 } else if (mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER) {
-                    int oldImsFeatrue = mCurrentImsFeature;
+                    int oldImsFeatrue = getImsFeature(serviceId); // UNISOC: Add for bug950573
                     /* SPRD: Modify for bug595321{@ */
                     if (mIsCalling) {
                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
@@ -2988,10 +3059,11 @@ public class ImsService extends Service {
                         }
                     } else {
                         mIsPendingRegisterVolte = true;
+                        mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;    // UNISOC: Add for bug950573
                         updateImsFeature(serviceId);
-                        mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
+
                         Log.i(TAG,
-                                "onImsPdnStatusChange -> mCurrentImsFeature:"
+                                "onImsPdnStatusChange -> currentImsFeature:"
                                         + ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE
                                         + " mIsCalling:" + mIsCalling);
                         if (mImsServiceListenerEx != null) {
@@ -3016,6 +3088,7 @@ public class ImsService extends Service {
                         mPendingActivePdnSuccess = false;
                         mWifiService
                                 .updateCallRatState(CallRatState.CALL_NONE);
+                        mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;    // UNISOC: Add for bug950573
                     }
                     /* @} */
                 }
@@ -3038,9 +3111,10 @@ public class ImsService extends Service {
     public void onImsNetworkInfoChange(int type, String info) {
         Log.i(TAG, "onImsNetworkInfoChange->type:" + type + " info:" + info);
         if (mFeatureSwitchRequest != null) {
+            int currentImsFeature = getImsFeature(mFeatureSwitchRequest.mServiceId); // UNISOC: Add for bug950573
             Log.i(TAG, "onImsNetworkInfoChange->mFeatureSwitchRequest:"
-                    + mFeatureSwitchRequest.toString() + " mCurrentImsFeature:"
-                    + mCurrentImsFeature);
+                    + mFeatureSwitchRequest.toString() + " currentImsFeature:"
+                    + currentImsFeature);
             Log.i(TAG, "onImsNetworkInfoChange->type: " + type + " info: "
                     + info);
             mNetworkType = type;
@@ -3186,10 +3260,11 @@ public class ImsService extends Service {
     public void updateInCallState(boolean isInCall) {
         Log.i(TAG,"updateInCallState->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall
                 + " isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling);
+        int currentImsFeature = getImsFeature(Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1)); // UNISOC: Add for bug950573
         if (mIsCalling != isInCall) {
             mIsCalling = isInCall;
             if (mIsCalling
-                    && (mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI || mInCallPhoneId != ImsRegister
+                    && (currentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI || mInCallPhoneId != ImsRegister
                             .getPrimaryCard(mPhoneCount))) {
                 mWifiService
                         .updateIncomingCallAction(IncomingCallAction.REJECT);
@@ -3198,7 +3273,7 @@ public class ImsService extends Service {
                         .updateIncomingCallAction(IncomingCallAction.NORMAL);
             }
         }
-        if ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI && isInCall != mIsWifiCalling && mIsVowifiCall)
+        if ((currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI && isInCall != mIsWifiCalling && mIsVowifiCall)
                 || (!isInCall && mIsWifiCalling)) {
             mIsWifiCalling = isInCall;
             for (Map.Entry<Integer, ImsServiceImpl> entry : mImsServiceImplMap
@@ -3319,4 +3394,71 @@ public class ImsService extends Service {
         }
         return false;
     }
+
+    /* UNISOC: Add for bug950573 @{*/
+    /**
+     * Used for get IMS feature for main sim card.
+     *
+     * @return: ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN = -1;
+     *          ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE = 0;
+     *          ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI = 2;
+     */
+    private int getPrimaryCardImsFeature() {
+        ImsServiceImpl imsService = mImsServiceImplMap.get(Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1));
+        if(imsService != null)
+            return imsService.getCurrentImsFeature();
+        else
+            return ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+    }
+
+    /**
+     * Used for get IMS feature for specific card.
+     *
+     * @param: serviceId:  serviceId to get currentImsFeature
+     * @return: ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN = -1;
+     *          ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE = 0;
+     *          ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI = 2;
+     */
+
+    private int getImsFeature(int serviceId) {
+        ImsServiceImpl imsService = mImsServiceImplMap.get(Integer.valueOf(serviceId));
+        if(imsService != null)
+            return imsService.getCurrentImsFeature();
+        else
+            return ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+    }
+
+    /**
+     * Used for set IMS feature for specific ServiceId.
+     * @param: serviceId:  serviceId of the sim card to update currentImsFeature
+     *         imsFeature: ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN = -1;
+     *                     ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE = 0;
+     *                     ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI = 2;
+     */
+    private void setCurrentImsFeature(int serviceId, int imsFeature) {
+        ImsServiceImpl imsService = mImsServiceImplMap.get(new Integer(serviceId));
+        if(imsService != null)
+            imsService.setCurrentImsFeature(imsFeature);
+    }
+
+    /**
+     * Used for get the serviceId that is responsible for handling switch or HO request to VoWifi.
+     */
+    private int getVoWifiServiceId() {
+        int serviceId = IMS_INVALID_SERVICE_ID;
+
+        if (mFeatureSwitchRequest != null) {
+            serviceId = mFeatureSwitchRequest.mServiceId;
+        } else if ((mVowifiAttachedServiceId != IMS_INVALID_SERVICE_ID)
+                && (mImsServiceImplMap.get(new Integer(mVowifiAttachedServiceId)) != null)) {
+            serviceId = mVowifiAttachedServiceId;
+        }
+
+        if (serviceId != IMS_INVALID_SERVICE_ID) {
+            Log.i(TAG,"VoWifiServiceId is : " + serviceId);
+        }
+
+        return serviceId;
+    }
+    /*@}*/
 }

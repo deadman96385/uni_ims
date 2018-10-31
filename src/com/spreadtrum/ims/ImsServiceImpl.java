@@ -159,6 +159,7 @@ public class ImsServiceImpl extends MmTelFeature {
     //add for unisoc 911545
     private MmTelCapabilities mDeviceVolteCapabilities = new MmTelCapabilities();
     private MmTelCapabilities mDeviceVowifiCapabilities = new MmTelCapabilities();
+    private int mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;  // UNISOC: Add for bug950573
 
     public IImsRegistration getRegistration(){
         return mImsRegistration;
@@ -1544,4 +1545,27 @@ public class ImsServiceImpl extends MmTelFeature {
         }
         return subId;
     }
+
+    /* UNISOC: Add for bug950573 @{*/
+    /**
+     * Used for get IMS feature.
+     *
+     * @return: ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN = -1;
+     *          ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE = 0;
+     *          ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI = 2;
+     */
+    public int getCurrentImsFeature() {
+        return mCurrentImsFeature;
+    }
+    /**
+     * Used for set IMS feature.
+     *
+     * @param: imsFeature: ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN = -1;
+     *                     ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE = 0;
+     *                     ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI = 2;
+     */
+    public void setCurrentImsFeature(int imsFeature) {
+        mCurrentImsFeature = imsFeature;
+    }
+    /*@}*/
 }
