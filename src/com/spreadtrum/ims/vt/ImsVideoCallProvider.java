@@ -56,6 +56,7 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
 
     /** volte media event code. */
     private static final int EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 500;
+    private static final long EVENT_MT_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT = 10000;
     private static final int EVENT_SRVCC_STATE_CHANGED = 100;
     private static final int EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT = 101;//SPRD: add for bug674565
     //SPRD: add for bug 846738, 905754
@@ -614,7 +615,7 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
                 msg.what = EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT;
                 msg.obj = mCi;
                 mVTHandler.removeMessages(EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
-                mVTHandler.sendMessageDelayed(msg, 10000);
+                mVTHandler.sendMessageDelayed(msg, getMeidaChangeTimeout());
                 /* SPRD: add for bug543928 and bug601503@{ */
                 PowerManager powerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
                 if(powerManager != null && !powerManager.isScreenOn()){
@@ -695,4 +696,19 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
                 | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED;
         return toast;
     }
+
+    /* UNISOC: add for bug958646 */
+    public long getMeidaChangeTimeout(){
+        if(mImsCallSessionImpl != null){
+            int phoneId = mImsCallSessionImpl.getServiceId() - 1;
+            CarrierConfigManager configManager = (CarrierConfigManager) mContext.getSystemService(
+                    Context.CARRIER_CONFIG_SERVICE);
+            if (configManager.getConfigForPhoneId(phoneId) != null) {
+                return configManager.getConfigForPhoneId(phoneId).getLong(CarrierConfigManagerEx.KEY_MT_REQUEST_MEDIA_CHANGE_TIMEOUT_LONG);
+            }
+        }
+        return EVENT_MT_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT;
+    }
+    /* @}*/
+
 }
