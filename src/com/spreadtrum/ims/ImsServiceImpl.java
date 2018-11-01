@@ -513,6 +513,9 @@ public class ImsServiceImpl extends MmTelFeature {
                     log("EVENT_RADIO_STATE_CHANGED->mImsRegistered:" + mImsServiceState.mImsRegistered +"  isRaidoOn=" + mPhone.isRadioOn());
                     if (!mPhone.isRadioOn()) {
                         mImsServiceState.mImsRegistered = false;
+                        // add for unisoc 947149
+                        TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state",
+                            mImsServiceState.mImsRegistered ? "1" :"0");
                         notifyRegisterStateChange();
                     }
                    break;
