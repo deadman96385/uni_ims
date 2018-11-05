@@ -110,6 +110,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final String ACTION_CALL_ALERTING = "com.android.ACTION_CALL_ALERTING";
     //SPRD: add for bug 846738
     boolean mIsSupportTxRxVideo = SystemProperties.getBoolean("persist.sys.txrx_vt", false);
+    //SPRD: add for bug858168
+    boolean mVideoHasDowngrade;
+    private static final int SPECIAL_CALL_TYPE = 99;
+    /* SPRD Feature Porting: Volte Local Tone Feature. @{ */
+    private static final String ACTION_SUPP_SERVICE_NOTIFICATION =
+            "com.android.ACTION_SUPP_SERVICE_NOTIFICATION";
+    private static final String SUPP_SERV_CODE_EXTRA = "supp_serv_code";
+    private static final String SUPP_SERV_NOTIFICATION_TYPE_EXTRA = "supp_serv_notification_type";
+    /* @} */
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -958,9 +967,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
         /*SPRD:bug523375 add voice accept video call @{*/
-        if(callType == ImsCallProfile.CALL_TYPE_VOICE && (mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT)){
+        if( mVideoHasDowngrade && (callType != SPECIAL_CALL_TYPE)){
+            mVideoHasDowngrade = false;
+        } else if((callType == SPECIAL_CALL_TYPE) || (callType == ImsCallProfile.CALL_TYPE_VOICE)
+                && (mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT)){
             Log.i(TAG, "voice accept video call!");
             mCi.requestVolteCallFallBackToVoice(Integer.valueOf(getCallId()),mHandler.obtainMessage(ACTION_COMPLETE_ACCEPT_AS_AUDIO,this));
+            if(callType == SPECIAL_CALL_TYPE){
+                mVideoHasDowngrade = true;
+                return;
+            }
         }/*@}*/
 
         mImsCallProfile.mMediaProfile = profile;
