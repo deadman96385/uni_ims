@@ -76,6 +76,7 @@ import com.android.ims.internal.IImsFeatureStatusCallback;
 import com.android.ims.internal.IImsMultiEndpoint;
 import com.android.ims.internal.IImsServiceListenerEx;
 import vendor.sprd.hardware.radio.V1_0.ImsNetworkInfo;
+import com.android.sprd.telephony.CommandException;
 import android.content.ComponentName;
 import android.content.ServiceConnection;
 import android.telephony.data.DataProfile;
@@ -557,7 +558,16 @@ public class ImsServiceImpl extends MmTelFeature {
                 /*SPRD: add for bug612670 @{ */
                 case EVENT_SET_VOICE_CALL_AVAILABILITY_DONE:
                     if(mPhone.isRadioAvailable() && ar.exception != null && ar.userObj != null){
-                        log("EVENT_SET_VOICE_CALL_AVAILABILITY_DONE: exception");
+                        log("EVENT_SET_VOICE_CALL_AVAILABILITY_DONE: exception "+ar.exception);
+                        /*UNISOC:fix for bug 960967 {*/
+                        if(ar.exception instanceof CommandException){
+                            CommandException e = (CommandException) ar.exception;
+                            if(e.getCommandError() == CommandException.Error.RADIO_NOT_AVAILABLE){
+                                break;
+                            }
+                        }
+                        /*@}*/
+
                         //SPRD: Bug 623247
                         int value = ((Integer) ar.userObj).intValue();
                         if (DBG) log("value = " + value);
