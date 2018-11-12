@@ -110,6 +110,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final String ACTION_CALL_ALERTING = "com.android.ACTION_CALL_ALERTING";
     //SPRD: add for bug 846738
     boolean mIsSupportTxRxVideo = SystemProperties.getBoolean("persist.sys.txrx_vt", false);
+    /* SPRD Feature Porting: Volte Local Tone Feature. @{ */
+    private static final String ACTION_SUPP_SERVICE_NOTIFICATION =
+            "com.android.ACTION_SUPP_SERVICE_NOTIFICATION";
+    private static final String SUPP_SERV_CODE_EXTRA = "supp_serv_code";
+    private static final String SUPP_SERV_NOTIFICATION_TYPE_EXTRA = "supp_serv_notification_type";
+    /* @} */
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -1655,6 +1661,18 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     /* SPRD:Add for bug582072 @{ */
     public void notifyRemoteVideoProfile(AsyncResult ar) {
         SuppServiceNotification notification = (SuppServiceNotification) ar.result;
+
+        /* SPRD Feature Porting: Volte Local Tone Feature. @{ */
+        if (notification != null) {
+            int code = notification.code;
+            int notificationType = notification.notificationType;
+            Intent intent = new Intent();
+            intent.setAction(ACTION_SUPP_SERVICE_NOTIFICATION);
+            intent.putExtra(SUPP_SERV_CODE_EXTRA, code);
+            intent.putExtra(SUPP_SERV_NOTIFICATION_TYPE_EXTRA, notificationType);
+            mContext.sendBroadcast(intent);
+        }
+        /* @} */
 
             switch (notification.code) {
             case SuppServiceNotification.MT_CODE_CALL_ON_HOLD:
