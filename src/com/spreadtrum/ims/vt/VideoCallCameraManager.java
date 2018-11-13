@@ -66,7 +66,7 @@ public class VideoCallCameraManager {
     private boolean mThreadRunning;
     public int mWidth = 176;
     public int mHeight = 144;
-    private int mDeviceRotation = 0;
+    private int mDeviceRotation = 270;
     private boolean mIsFirstInit = true;
     private boolean mIsSurfacePreviewFailed = false;
     private int mVideoQuality;
