@@ -28,7 +28,7 @@
     <string name="remote_reject_request">Remote request rejected </string>
     <string name="remote_accept_request">Remote request accepted</string>
     <string name="callFailed_fdn_only">Outgoing calls are restricted by FDN</string>
-    <string name="camera_open_fail">Camera open fail</string>
+    <string name="camera_open_fail">Failed to open camera</string>
     <string name="ims_switch_failed">Network error, please try again later</string>
     <string-array name="videophone_fallback_menu">
         <item>@string/videophone_fallback_menu_videocall</item>
