@@ -28,6 +28,8 @@
                  <action android:name="android.telephony.ims.ImsService" />
              </intent-filter>
         </service>
+
+        <service android:name=".vowifi.ImsDozeManagerService" android:exported="true" />
     </application>
 
 </manifest>

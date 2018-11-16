@@ -3,6 +3,7 @@ package com.spreadtrum.ims.vowifi;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Handler;
@@ -737,6 +738,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             mCallMgr.registerListener(mCallListener);
 
             mUtSyncMgr = UtSyncManager.getInstance(mContext);
+
+            // Start the ims_doze_manager service.
+            mContext.startService(new Intent(mContext, ImsDozeManagerService.class));
         }
     }
 
