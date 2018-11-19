@@ -27,6 +27,7 @@
 <string name="remote_request_change_reject">"拒絕"</string>
 <string name="remote_reject_request">"對端拒絕請求"</string>
 <string name="remote_accept_request">"對端接受請求"</string>
+<string name="request_of_upgrade_vt_call_timeout">視頻電話陞級請求超時</string>
 <string name="callFailed_fdn_only">"外撥電話受固定撥號限制"</string>
     <string name="camera_open_fail">"攝像頭故障"</string>
      <string name="ims_switch_failed">"網絡錯誤，請稍後重試"</string>

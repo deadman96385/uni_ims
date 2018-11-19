@@ -27,6 +27,7 @@
     <string name="remote_request_change_reject">Reject</string>
     <string name="remote_reject_request">Remote request rejected </string>
     <string name="remote_accept_request">Remote request accepted</string>
+    <string name="request_of_upgrade_vt_call_timeout">The video call upgrade request has timed out</string>
     <string name="callFailed_fdn_only">Outgoing calls are restricted by FDN</string>
     <string name="camera_open_fail">Failed to open camera</string>
     <string name="ims_switch_failed">Network error, please try again later</string>

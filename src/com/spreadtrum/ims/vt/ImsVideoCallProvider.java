@@ -117,6 +117,8 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
                         ImsRIL imsCi = (ImsRIL)msg.obj;
                         if(imsCi != null){
                             imsCi.callMediaChangeRequestTimeOut(Integer.parseInt(mImsCallSessionImpl.getCallId()), null);
+                            Toast.makeText(mContext.getApplicationContext(), //Unisoc: add for bug967909
+                                    mContext.getString(R.string.request_of_upgrade_vt_call_timeout), Toast.LENGTH_SHORT).show();
                         }
                     }
                     mImsCallSessionImpl.getLocalRequestProfile().mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
