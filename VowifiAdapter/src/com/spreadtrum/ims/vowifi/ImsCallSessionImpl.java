@@ -676,21 +676,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
 
-        // Terminate the call
-        terminateCall(reason);
-
         // As user terminate the call, we need to check if there is conference call.
         ImsCallSessionImpl confSession = mCallManager.getConfCallSession();
         if (confSession != null) {
             ImsCallSessionImpl hostSession = confSession.getHostCallSession();
-            if (this.equals(confSession)
-                    && hostSession != null
-                    && hostSession.getState() > State.INVALID
-                    && hostSession.getState() < State.TERMINATED) {
-                // The conference call already connected, but the host call do not accept the
-                // invite. If terminate the conference call, we need terminate the host call.
-                hostSession.terminate(reason);
-                hostSession.close();
+            if (this.equals(confSession)) {
+                // If the conference terminte, we'd like to terminate all the child session.
+                terminateChildCalls(reason);
             } else if (this.equals(hostSession)
                     && confSession != null
                     && confSession.getState() > State.INVALID
@@ -701,6 +693,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 confSession.close();
             }
         }
+
+        // Terminate the call
+        terminateCall(reason);
     }
 
     /**
@@ -1341,6 +1336,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     public boolean isEmergencyCall() {
         return mIsEmergency;
+    }
+
+    public boolean isConferenceCall() {
+        return mIsConfHost && (mCallProfile == null ? false
+                : mCallProfile.getCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, false));
     }
 
     public ImsCallSessionImpl removeParticipant(String phoneNumber) {
@@ -2008,6 +2008,33 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         accept(mCallProfile.mCallType, mCallProfile.mMediaProfile);
     }
 
+    public void terminateChildCalls(int reason) throws RemoteException {
+        if (isConferenceCall() && getState() > State.ESTABLISHING) {
+            if (mInInviteSession != null
+                    && mInInviteSession.getState() > State.INVALID
+                    && mInInviteSession.getState() < State.TERMINATED) {
+                // The conference call will be terminated, we need terminate the
+                // in invite call.
+                Log.d(TAG, "Terminate the in invite call: " + mInInviteSession);
+                mInInviteSession.terminate(reason);
+                mInInviteSession.close();
+            }
+            if (mWaitForInviteSessions != null && mWaitForInviteSessions.size() > 0) {
+                // The conference call will be terminated, we need terminate the
+                // wait for invite call.
+                for (ImsCallSessionImpl participant : mWaitForInviteSessions) {
+                    if (participant != null
+                            && participant.getState() > State.INVALID
+                            && participant.getState() < State.TERMINATED) {
+                        Log.d(TAG, "Terminate the wait for invite call: " + participant);
+                        participant.terminate(reason);
+                        participant.close();
+                    }
+                }
+            }
+        }
+    }
+
     public boolean isUssdCall() {
         int dialType = mCallProfile.getCallExtraInt(ImsCallProfile.EXTRA_DIALSTRING);
         return dialType == ImsCallProfile.DIALSTRING_USSD;
@@ -2302,11 +2329,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 break;
         }
         return type;
-    }
-
-    private boolean isConferenceCall() {
-        return mIsConfHost && (mCallProfile == null ? false
-                : mCallProfile.getCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, false));
     }
 
     private ArrayList<String> findNeedRemoveUser(String[] participants) {

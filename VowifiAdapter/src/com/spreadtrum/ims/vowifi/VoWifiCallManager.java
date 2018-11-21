@@ -1123,6 +1123,12 @@ public class VoWifiCallManager extends ServiceManager {
                 // reset the terminate reason as the emergency call needn't CS retry.
                 termReasonCode = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
             }
+
+            if (callSession.isConferenceCall()) {
+                // If the conference call terminate, we'd like to terminate all the child calls.
+                callSession.terminateChildCalls(termReasonCode);
+            }
+
             ImsReasonInfo info = new ImsReasonInfo(termReasonCode, termReasonCode,
                     "The call terminated.");
             if (oldState < State.NEGOTIATING) {
