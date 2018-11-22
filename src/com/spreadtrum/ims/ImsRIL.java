@@ -1720,6 +1720,16 @@ public final class ImsRIL {
         mCi.registerForIccRefresh(h, what, obj);
     }
 
+    /* UNISOC: add for bug968317 @{ */
+    public void registerForAvailable(Handler h, int what, Object obj){
+        mCi.registerForAvailable(h, what, obj);
+    }
+
+    public void registerForOn(Handler h, int what, Object obj){
+        mCi.registerForOn(h, what, obj);
+    }
+    /*@}*/
+
     public void requestImsHandover(int type, Message response) {
         if(getRadioInteractor() != null) {
             mRadioInteractor.requestImsHandover(type,response);

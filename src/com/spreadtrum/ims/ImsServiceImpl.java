@@ -85,6 +85,7 @@ public class ImsServiceImpl extends MmTelFeature {
     private static final String TAG = ImsServiceImpl.class.getSimpleName();
     private static final boolean DBG = true;
     private static final int IMS_CALLING_RTP_TIME_OUT        = 1;
+    private static final int IMS_INVALID_VOLTE_SETTING       =-1;  // UNISOC: Add for bug968317
 
     public static final int IMS_REG_STATE_INACTIVE            = 0;
     public static final int IMS_REG_STATE_REGISTERED          = 1;
@@ -113,11 +114,21 @@ public class ImsServiceImpl extends MmTelFeature {
     protected static final int EVENT_IMS_GET_SRVCC_CAPBILITY           = 115;
     protected static final int EVENT_IMS_GET_PCSCF_ADDRESS             = 116;
     protected static final int EVENT_IMS_GET_IMS_REG_ADDRESS           = 117;
+    protected static final int EVENT_RADIO_AVAILABLE                   = 118;
+    protected static final int EVENT_RADIO_ON                          = 119;
+
+    /* UNISOC: add for bug968317 @{ */
+    class VoLTECallAvailSyncStatus {
+        public static final int VOLTE_CALL_AVAIL_SYNC_IDLE     = 0;
+        public static final int VOLTE_CALL_AVAIL_SYNC_ONGOING  = 1;
+        public static final int VOLTE_CALL_AVAIL_SYNC_FAIL     = 2;
+    }
+    /*@}*/
 
     private GsmCdmaPhone mPhone;
     private ImsServiceState mImsServiceState;
     private int mServiceClass = ImsServiceClass.MMTEL;
-    private int mServiceId; 
+    private int mServiceId;
     private PendingIntent mIncomingCallIntent;
     private IImsRegistrationListener mListener;
     private IImsFeatureStatusCallback mImsFeatureStatusCallback;
@@ -160,6 +171,11 @@ public class ImsServiceImpl extends MmTelFeature {
     private MmTelCapabilities mDeviceVolteCapabilities = new MmTelCapabilities();
     private MmTelCapabilities mDeviceVowifiCapabilities = new MmTelCapabilities();
     private int mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;  // UNISOC: Add for bug950573
+    /* UNISOC: add for bug968317 @{ */
+    private int VoLTECallAvailSync = VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_IDLE;
+    private int currentVoLTESetting= IMS_INVALID_VOLTE_SETTING;
+    private int pendingVoLTESetting= IMS_INVALID_VOLTE_SETTING;
+    /*@}*/
 
     public IImsRegistration getRegistration(){
         return mImsRegistration;
@@ -249,14 +265,29 @@ public class ImsServiceImpl extends MmTelFeature {
                 mDeviceVowifiCapabilities.removeCapabilities(pair.getCapability());
             }
         }
+        /* UNISOC: modify for bug968317 @{ */
         //add for unisoc 900059,911545
+        int newVoLTESetting;
         if(mDeviceVolteCapabilities.isCapable(MmTelCapabilities.CAPABILITY_TYPE_VOICE)){
             log("changeEnabledCapabilities-> setImsVoiceCallAvailability on");
-            mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, ImsConfig.FeatureValueConstants.OFF));
+            newVoLTESetting = ImsConfig.FeatureValueConstants.ON;
         } else {
             log("changeEnabledCapabilities-> setImsVoiceCallAvailability off");
-            mCi.setImsVoiceCallAvailability(0 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, ImsConfig.FeatureValueConstants.ON));
+            newVoLTESetting = ImsConfig.FeatureValueConstants.OFF;
         }
+
+        if(VoLTECallAvailSync != VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_ONGOING) {
+            currentVoLTESetting = newVoLTESetting;
+            setVoLTECallAvailablity();
+        } else {
+            if(newVoLTESetting != currentVoLTESetting) {
+                pendingVoLTESetting = newVoLTESetting;
+            } else {
+                pendingVoLTESetting = IMS_INVALID_VOLTE_SETTING;
+            }
+        }
+        /*@}*/
+        /*@}*/
 
         if(isVoWifiEnabled()) {
             notifyCapabilitiesStatusChanged(mDeviceVowifiCapabilities);
@@ -361,6 +392,8 @@ public class ImsServiceImpl extends MmTelFeature {
         mCi.registerImsNetworkInfo(mHandler, EVENT_IMS_NETWORK_INFO_UPDATE, null);
         mCi.registerImsRegAddress(mHandler, EVENT_IMS_REGISTER_ADDRESS_CHANGED, null);
         mCi.registerImsWiFiParam(mHandler, EVENT_IMS_WIFI_PARAM, null);
+        mCi.registerForAvailable(mHandler, EVENT_RADIO_AVAILABLE, null); // UNISOC: Add for bug968317
+        mCi.registerForOn(mHandler, EVENT_RADIO_ON, null);               // UNISOC: Add for bug968317
         log("ImsServiceImpl onCreate->phoneId:"+phone.getPhoneId());
         mUiccController = UiccController.getInstance();
         mUiccController.registerForIccChanged(mHandler, DctConstants.EVENT_ICC_CHANGED, null);
@@ -428,6 +461,15 @@ public class ImsServiceImpl extends MmTelFeature {
                             default:
                                 break;
                         }
+
+                        /* UNISOC: add for bug968317 @{ */
+                        if (((mImsServiceState.mRegState == IMS_REG_STATE_INACTIVE) || (mImsServiceState.mRegState == IMS_REG_STATE_REGISTERED))
+                            && (VoLTECallAvailSync == VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_FAIL)) {
+                            log("EVENT_IMS_STATE_CHANGED -> setVoLTECallAvailablity");
+                            setVoLTECallAvailablity();
+                        }
+                        break;
+                        /*@}*/
                     } else {
                         log("EVENT_IMS_STATE_CHANGED : ar.exception = "+ar.exception +" ar.result:"+ar.result);
                     }
@@ -545,6 +587,13 @@ public class ImsServiceImpl extends MmTelFeature {
                         if(responseArray.intValue() == ImsService.ImsPDNStatus.IMS_PDN_READY){
                                 mCi.getImsPcscfAddress(mHandler.obtainMessage(EVENT_IMS_GET_PCSCF_ADDRESS));
                         }
+                        /* UNISOC: add for bug968317 @{ */
+                        if(((responseArray.intValue() == ImsService.ImsPDNStatus.IMS_PDN_READY) || (responseArray.intValue() == ImsService.ImsPDNStatus.IMS_PDN_ACTIVE_FAILED))
+                            && (VoLTECallAvailSync == VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_FAIL)) {
+                                log("EVENT_IMS_PND_STATE_CHANGED -> setVoLTECallAvailablity, ImsPDNStatus = " + responseArray.intValue());
+                                setVoLTECallAvailablity();
+                        }
+                        /*@}*/
                     } else {
                         log("EVENT_IMS_PND_STATE_CHANGED : ar.exception = "+ar.exception +" ar.result:"+ar.result);
                     }
@@ -558,33 +607,27 @@ public class ImsServiceImpl extends MmTelFeature {
                     break;
                 /*SPRD: add for bug612670 @{ */
                 case EVENT_SET_VOICE_CALL_AVAILABILITY_DONE:
-                    if(mPhone.isRadioAvailable() && ar.exception != null && ar.userObj != null){
+                    /* UNISOC: modify for bug968317 @{ */
+                    if(ar.exception != null){
                         log("EVENT_SET_VOICE_CALL_AVAILABILITY_DONE: exception "+ar.exception);
-                        /*UNISOC:fix for bug 960967 {*/
-                        if(ar.exception instanceof CommandException){
-                            CommandException e = (CommandException) ar.exception;
-                            if(e.getCommandError() == CommandException.Error.RADIO_NOT_AVAILABLE){
-                                break;
-                            }
-                        }
-                        /*@}*/
-
-                        //SPRD: Bug 623247
-                        int value = ((Integer) ar.userObj).intValue();
-                        if (DBG) log("value = " + value);
-                        /* SPRD: AndroidP change save function, use property
-                         * follow ImsManager @{ */
-                        SubscriptionManager.setSubscriptionProperty(getSubId(),
-                                SubscriptionManager.ENHANCED_4G_MODE_ENABLED, String.valueOf(value));
-                        /*@}*/
-                        /*UNISOC:modify for IMS add for bug 930747 {*/
-                        android.provider.Settings.Global.putInt(mContext.getContentResolver(),
-                                android.provider.Settings.Global.ENHANCED_4G_MODE_ENABLED,
-                                value);
-                        /*@}*/
-
-                        Toast.makeText(mContext.getApplicationContext(), mContext.getString(R.string.ims_switch_failed), Toast.LENGTH_SHORT).show();
+                        log("Set VoLTE Call Availability failure, currentVoLTESetting = " + currentVoLTESetting);
                     }
+
+                    if(pendingVoLTESetting != IMS_INVALID_VOLTE_SETTING) {
+                        log("set new VoLTESetting=" + pendingVoLTESetting);
+                        currentVoLTESetting = pendingVoLTESetting;
+                        setVoLTECallAvailablity();
+                        pendingVoLTESetting = IMS_INVALID_VOLTE_SETTING;
+                        break;
+                    }
+
+                    if(ar.exception != null){
+                        VoLTECallAvailSync = VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_FAIL;
+                    } else {
+                        VoLTECallAvailSync  = VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_IDLE;
+                        currentVoLTESetting = IMS_INVALID_VOLTE_SETTING;
+                    }
+                    /*@}*/
                     break;
                 /*@}*/
                 case EVENT_IMS_WIFI_PARAM:
@@ -616,6 +659,22 @@ public class ImsServiceImpl extends MmTelFeature {
                         }
                     }
                     break;
+                /* UNISOC: add for bug968317 @{ */
+                case EVENT_RADIO_AVAILABLE:
+                    log("EVENT_RADIO_AVAILABLE");
+                    if (VoLTECallAvailSync == VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_FAIL) {
+                        log("EVENT_RADIO_AVAILABLE -> setVoLTECallAvailablity");
+                        setVoLTECallAvailablity();
+                    }
+                    break;
+                case EVENT_RADIO_ON:
+                    log("EVENT_RADIO_ON");
+                    if (VoLTECallAvailSync == VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_FAIL) {
+                        log("EVENT_RADIO_ON -> setVoLTECallAvailablity");
+                        setVoLTECallAvailablity();
+                    }
+                    break;
+                /*@}*/
                 default:
                     break;
             }
@@ -1566,6 +1625,21 @@ public class ImsServiceImpl extends MmTelFeature {
      */
     public void setCurrentImsFeature(int imsFeature) {
         mCurrentImsFeature = imsFeature;
+    }
+    /*@}*/
+
+    /* UNISOC: add for bug968317 @{ */
+    /**
+     * Used for set VoLTE Voice Call Availablity.
+     *
+     */
+    private void setVoLTECallAvailablity() {
+        if(currentVoLTESetting != IMS_INVALID_VOLTE_SETTING) {
+            VoLTECallAvailSync = VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_ONGOING;
+
+            log("setVoLTECallAvailablity, currentVoLTESetting = " + currentVoLTESetting);
+            mCi.setImsVoiceCallAvailability(currentVoLTESetting , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, currentVoLTESetting));
+        }
     }
     /*@}*/
 }
