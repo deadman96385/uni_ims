@@ -767,12 +767,14 @@ public class ImsService extends Service {
                                                     : WifiState.CONNECTED);
                                 }
                             } else {
-                                Log.i(TAG,
-                                        "ACTION_NOTIFY_VOWIFI_UNAVAILABLE -> operationSuccessed -> IMS_OPERATION_SET_VOWIFI_UNAVAILABLE");
-                                mImsServiceListenerEx
-                                        .operationSuccessed(
-                                                mReleaseVowifiRequest.mRequestId,
-                                                ImsOperationType.IMS_OPERATION_SET_VOWIFI_UNAVAILABLE);
+                                if (mImsServiceListenerEx != null) { //UNISOC: modify by bug968960
+                                    Log.i(TAG,
+                                            "ACTION_NOTIFY_VOWIFI_UNAVAILABLE -> operationSuccessed -> IMS_OPERATION_SET_VOWIFI_UNAVAILABLE");
+                                    mImsServiceListenerEx
+                                            .operationSuccessed(
+                                                    mReleaseVowifiRequest.mRequestId,
+                                                    ImsOperationType.IMS_OPERATION_SET_VOWIFI_UNAVAILABLE);
+                                }
                                 mReleaseVowifiRequest = null;
                             }
                             Log.i(TAG,
@@ -2867,11 +2869,13 @@ public class ImsService extends Service {
                 if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) {
                     if (state == ImsHandoverResult.IMS_HANDOVER_PDN_BUILD_FAIL
                             || state == ImsHandoverResult.IMS_HANDOVER_REGISTER_FAIL) {
-                        mImsServiceListenerEx
-                                .operationFailed(
-                                        mFeatureSwitchRequest.mRequestId,
-                                        "VOLTE pdn failed.",
-                                        ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
+                        if (mImsServiceListenerEx != null) { //UNISOC: modify by bug968960
+                            mImsServiceListenerEx
+                                    .operationFailed(
+                                            mFeatureSwitchRequest.mRequestId,
+                                            "VOLTE pdn failed.",
+                                            ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
+                        }
                         mFeatureSwitchRequest = null;
                         if (!mIsCalling && mPendingActivePdnSuccess) {
                             mPendingActivePdnSuccess = false;
@@ -2881,7 +2885,9 @@ public class ImsService extends Service {
                                     "onImsHandoverStateChange->ACTION_START_HANDOVER fail,mPendingActivePdnSuccess is true!");
                         }
                     } else if (state == ImsHandoverResult.IMS_HANDOVER_SRVCC_FAILED) {
-                        mImsServiceListenerEx.onSrvccFaild();
+                        if (mImsServiceListenerEx != null) { //UNISOC: modify by bug968960
+                            mImsServiceListenerEx.onSrvccFaild();
+                        }
                         Log.i(TAG,
                                 "onImsHandoverStateChange->IMS_HANDOVER_SRVCC_FAILED.");
                     }
