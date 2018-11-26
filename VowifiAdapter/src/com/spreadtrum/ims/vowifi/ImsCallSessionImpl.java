@@ -64,6 +64,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     private int mCallId = -1;
     private boolean mIsAlive = false;
+    private boolean mIsFocus = false;
     private boolean mIsConfHost = false;
     private boolean mAudioStart = false;
     private boolean mIsEmergency = false;
@@ -1336,6 +1337,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     public boolean isEmergencyCall() {
         return mIsEmergency;
+    }
+
+    public void updateAsIsFocus() {
+        mIsFocus = true;
+    }
+
+    public boolean isFocus() {
+        return mIsFocus;
     }
 
     public boolean isConferenceCall() {

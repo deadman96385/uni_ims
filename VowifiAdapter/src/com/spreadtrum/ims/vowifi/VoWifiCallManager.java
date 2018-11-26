@@ -68,6 +68,8 @@ public class VoWifiCallManager extends ServiceManager {
 
     private static final String TAG = Utilities.getTag(VoWifiCallManager.class.getSimpleName());
 
+    // FIXME: This call profile's used by UI to disabled the merge action.
+    private static final String EXTRA_IS_FOCUS = "is_mt_conf_call";
     private static final int CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED = 150;
 
     private static final String PROP_KEY_AUTO_ANSWER = "persist.sys.vowifi.autoanswer";
@@ -1099,6 +1101,11 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
+        if (callSession.isConferenceCall()) {
+            // If the conference call terminate, we'd like to terminate all the child calls.
+            callSession.terminateChildCalls(termReasonCode);
+        }
+
         // As call terminated, stop all the video.
         // Note: This stop action need before call session terminated callback. Otherwise,
         //       the video call provider maybe changed to null.
@@ -1110,6 +1117,7 @@ public class VoWifiCallManager extends ServiceManager {
         int oldState = callSession.getState();
         callSession.updateState(State.TERMINATED);
         IImsCallSessionListener listener = callSession.getListener();
+        ImsCallSessionImpl confSession = callSession.getConfCallSession();
         if (listener != null) {
             if (callSession.isUssdCall()) {
                 Log.d(TAG, "As ussd start failed, give the ussd msg received as not support.");
@@ -1124,11 +1132,6 @@ public class VoWifiCallManager extends ServiceManager {
                 termReasonCode = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
             }
 
-            if (callSession.isConferenceCall()) {
-                // If the conference call terminate, we'd like to terminate all the child calls.
-                callSession.terminateChildCalls(termReasonCode);
-            }
-
             ImsReasonInfo info = new ImsReasonInfo(termReasonCode, termReasonCode,
                     "The call terminated.");
             if (oldState < State.NEGOTIATING) {
@@ -1136,7 +1139,6 @@ public class VoWifiCallManager extends ServiceManager {
                 // failed call back.
                 listener.callSessionInitiatedFailed(info);
             } else {
-                ImsCallSessionImpl confSession = callSession.getConfCallSession();
                 if (confSession != null) {
                     // If the conference session is not null, it means this call session was
                     // invite as the participant, and when it received the terminate action,
@@ -1146,12 +1148,27 @@ public class VoWifiCallManager extends ServiceManager {
                 }
 
                 // Terminate the call as normal.
-                listener.callSessionTerminated(info);
+                if (confSession != null
+                        && !confSession.equals(callSession)
+                        && listener.equals(confSession.getListener())) {
+                    // FIXME: This case is added for sequence in time.
+                    // After the user start the merge action, but not notify as merge complete,
+                    // the host call was invited into another conference call, then the host call
+                    // listener can not set as null.
 
-                // After give the callback, close this call session if it is a participant
-                // of a conference.
-                if (confSession != null) callSession.close();
+                    // If the current call isn't conference call, but the listener is same as
+                    // the conference call's listener, we needn't notify the call terminated.
+                    Log.w(TAG, "This call's listener is same as the conference call's listener.");
+                } else {
+                    listener.callSessionTerminated(info);
+                }
             }
+        }
+
+        // After give the callback, close this call session as it is a participant
+        // of the conference.
+        if (confSession != null && !confSession.equals(callSession)) {
+            callSession.close();
         }
 
         removeCall(callSession);
@@ -1416,14 +1433,24 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
+        if (callSession.isFocus()) {
+            Log.d(TAG, "Already added to conference, needn't update the is_focus state.");
+            return;
+        }
+
+        callSession.updateAsIsFocus();
+
         ImsCallProfile callProfile = callSession.getCallProfile();
         callProfile.setCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, true);
-        Toast.makeText(mContext, R.string.vowifi_call_is_focus, Toast.LENGTH_LONG).show();
+        callProfile.setCallExtraBoolean(EXTRA_IS_FOCUS, true);
 
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
+            listener.callSessionUpdated(callProfile);
             listener.callSessionMultipartyStateChanged(true);
         }
+
+        Toast.makeText(mContext, R.string.vowifi_call_is_focus, Toast.LENGTH_LONG).show();
     }
 
     private void handleCallIsEmergency(ImsCallSessionImpl callSession, String urnUri, String reason,
