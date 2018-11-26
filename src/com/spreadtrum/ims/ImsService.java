@@ -49,6 +49,7 @@ import com.android.internal.telephony.Call;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import com.android.internal.telephony.TelephonyIntents;
+import android.telephony.PhoneNumberUtils;
 
 
 import com.android.ims.ImsException;
@@ -279,6 +280,9 @@ public class ImsService extends Service {
     private NotificationChannel mVowifiChannel;
     private int mMakeCallPrimaryCardServiceId = -1;
     private int mVowifiAttachedServiceId = IMS_INVALID_SERVICE_ID; // UNISOC: Add for bug950573
+
+    private boolean mIsEmergencyCallonIms = false;//UNisoc: add for bug941037
+
     private class ImsServiceRequest {
         public int mRequestId;
         public int mEventCode;
@@ -1235,11 +1239,18 @@ public class ImsService extends Service {
                     if (mMakeCallPrimaryCardServiceId != -1)
                         mMakeCallPrimaryCardServiceId = -1;
                 }
-
+                /*SPRD: Modify for bug941037{@*/
+                boolean isEmergency = PhoneNumberUtils.isEmergencyNumber(incomingNumber);
+                if (!mIsWifiCalling && isEmergency && isInCall) {
+                    mIsEmergencyCallonIms = true;
+                } else {
+                    mIsEmergencyCallonIms = false;
+                }/*@}*/
                 updateInCallState(isInCall);
                 iLog("onCallStateChanged->isInCall:" + isInCall
                         + " mIsWifiCalling:" + mIsWifiCalling
-                        + " inCallPhoneId:" + mInCallPhoneId);
+                        + " inCallPhoneId:" + mInCallPhoneId
+                        + " mIsEmergencyCallonIms" + mIsEmergencyCallonIms);
             }
         };
         mTelephonyManager.listen(mPhoneStateListener,
@@ -1290,10 +1301,26 @@ public class ImsService extends Service {
                 + " mIsVolteCall: " + mIsVolteCall + " isVoWifiEnabled(): "
                 + isVoWifiEnabled() + " isVoLTEEnabled(): " + isVoLTEEnabled());
         mInCallPhoneId = serviceId - 1;// SPRD:add for bug635699
+
+
+        boolean dialEccOnIms = false;
+        CarrierConfigManager configManager = (CarrierConfigManager) this.getSystemService(
+                Context.CARRIER_CONFIG_SERVICE);
+        if (configManager.getConfigForPhoneId(mInCallPhoneId) != null) {
+            boolean dialViaIms = configManager.getConfigForPhoneId(mInCallPhoneId).getBoolean(
+                    CarrierConfigManagerEx.KEY_CARRIER_ECC_VIA_IMS,false);
+            Log.d(TAG,"createCallSessionInternal dialOnModemCarrier :" + dialViaIms);
+            if(isVoWifiEnabled() && profile.getServiceType() == ImsCallProfile.SERVICE_TYPE_EMERGENCY && dialViaIms){
+                mIsEmergencyCallonIms = true;
+                dialEccOnIms = true;
+                Log.d(TAG,"createCallSessionInternal dialEccOnModem :" + dialEccOnIms);
+            }
+        }
+
         updateInCallState(true);
         boolean isPrimaryCard = ImsRegister.getPrimaryCard(mPhoneCount) == (serviceId-1);
-        if ((isPrimaryCard && isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall)
-                || mIsVowifiCall) {
+        if (!dialEccOnIms && ((isPrimaryCard && isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall)
+                || mIsVowifiCall)) {
             if (isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall) {
                 mIsVowifiCall = true;
                 mWifiService.updateCallRatState(CallRatState.CALL_VOWIFI); // Add
@@ -3271,7 +3298,7 @@ public class ImsService extends Service {
             mIsCalling = isInCall;
             if (mIsCalling
                     && (currentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI || mInCallPhoneId != ImsRegister
-                            .getPrimaryCard(mPhoneCount))) {
+                            .getPrimaryCard(mPhoneCount) || mIsEmergencyCallonIms)) {
                 mWifiService
                         .updateIncomingCallAction(IncomingCallAction.REJECT);
             } else {
@@ -3279,7 +3306,7 @@ public class ImsService extends Service {
                         .updateIncomingCallAction(IncomingCallAction.NORMAL);
             }
         }
-        if ((currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI && isInCall != mIsWifiCalling && mIsVowifiCall)
+        if ((!mIsEmergencyCallonIms && currentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI && isInCall != mIsWifiCalling && mIsVowifiCall)
                 || (!isInCall && mIsWifiCalling)) {
             mIsWifiCalling = isInCall;
             for (Map.Entry<Integer, ImsServiceImpl> entry : mImsServiceImplMap
