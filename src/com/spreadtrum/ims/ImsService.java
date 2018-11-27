@@ -2031,14 +2031,25 @@ public class ImsService extends Service {
 
         @Override
         public int getVolteRegisterState() {
-            ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
-                    .valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1));
+            int primaryPhoneId = ImsRegister.getPrimaryCard(mPhoneCount);
+            int volteRegisterState = getVolteRegisterStateForPhone(primaryPhoneId);
+            return volteRegisterState;
+        }
+
+        /* UNISOC: Add for bug972969  @{*/
+        /**
+         * Used for Volte register state for specific sim card.
+         * param phoneId: identify specific sim card to get Volte register state
+         */
+        @Override
+        public int getVolteRegisterStateForPhone(int phoneId) {
+            ImsServiceImpl imsService = mImsServiceImplMap.get(Integer.valueOf(phoneId +1));
             int volteRegisterState = -1;
-            if (imsService != null) {
-                volteRegisterState = imsService.getVolteRegisterState();
-            } else {
-                Log.i(TAG, "getVolteRegisterState->ImsServiceImpl is null");
+            if(imsService == null) {
+                Log.i(TAG, "getVolteRegisterStateForPhone->ImsServiceImpl is null");
+                return volteRegisterState;
             }
+            volteRegisterState = imsService.getVolteRegisterState();
             return volteRegisterState;
         }
 
