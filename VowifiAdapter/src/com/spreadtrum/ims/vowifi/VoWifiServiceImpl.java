@@ -844,6 +844,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private void registerSuccess(int stateCode) {
         // When register success, sync the UT items.
         if (mUtSyncMgr != null) mUtSyncMgr.sync();
+        // When register success, initialize the queried state.
+        if (mImsUt != null) mImsUt.initQueriedState();
 
         if (mCallMgr != null) {
             // As login success, we need set the video quality, and reset the rat type.

@@ -45,6 +45,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final String TAG = Utilities.getTag(ImsUtImpl.class.getSimpleName());
 
     // Call forward service class
+    private static final int SERVICE_CLASS_NO_DEFINED = 0;
     private static final int SERVICE_CLASS_VOICE = CommandsInterface.SERVICE_CLASS_VOICE;
     // FIXME: This value defined in CallForwardEditPreference but not CommandsInterface.
     private static final int SERVICE_CLASS_VIDEO = 2;
@@ -55,6 +56,12 @@ public class ImsUtImpl extends IImsUt.Stub {
 
     private Context mContext;
     private boolean mUtEnabled;
+
+    // As the CW, CF and CB could be set with ussd code. And the set action will be failed
+    // if there isn't reference XML which saved when query.
+    private boolean mCWQueried = false;
+    private boolean mCFQueried = false;
+    private boolean mCBQueried = false;
 
     private IImsUtListener mListener = null;
     private IImsUtListenerEx mListenerEx = null;
@@ -248,7 +255,8 @@ public class ImsUtImpl extends IImsUt.Stub {
         if (Utilities.DEBUG) Log.i(TAG, "Try to query the call barring with the type: " + cbType);
 
         UTAction action = new UTAction("queryCallBarring", MSG_ACTION_QUERY_CALL_BARRING,
-                CMD_TIMEOUT, Integer.valueOf(cbType));
+                CMD_TIMEOUT, Integer.valueOf(cbType), "pwd",
+                Integer.valueOf(SERVICE_CLASS_NO_DEFINED));
         return mCmdManager.addCmd(action);
     }
 
@@ -348,12 +356,14 @@ public class ImsUtImpl extends IImsUt.Stub {
                 CMD_TIMEOUT, Integer.valueOf(cbType), Boolean.valueOf(enabled), "",
                 Integer.valueOf(SERVICE_CLASS_VOICE));
 
-        UTAction queryAction = new UTAction(false /* needn't feedback */,
-                false /* isn't extension */, "queryCallBarring", MSG_ACTION_QUERY_CALL_BARRING,
-                CMD_TIMEOUT, updateAction, Integer.valueOf(cbType));
+        if (!mCBQueried) {
+            UTAction queryAction = new UTAction(false /* needn't feedback */,
+                    false /* isn't extension */, "queryCallBarring", MSG_ACTION_QUERY_CALL_BARRING,
+                    CMD_TIMEOUT, updateAction, Integer.valueOf(cbType));
 
-        // Handle query CB first, and then update the CB settings.
-        mCmdManager.addCmd(queryAction);
+            // Handle query CB first, and then update the CB settings.
+            mCmdManager.addCmd(queryAction);
+        }
         return mCmdManager.addCmd(updateAction);
     }
 
@@ -375,10 +385,19 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + condition + ", number: " + number + ", timeSeconds: " + timeSeconds);
         }
 
-        UTAction utAction = new UTAction("updateCallForward", MSG_ACTION_UPDATE_CALL_FORWARD,
+        UTAction updateAction = new UTAction("updateCallForward", MSG_ACTION_UPDATE_CALL_FORWARD,
                 CMD_TIMEOUT, Integer.valueOf(action), Integer.valueOf(condition), number,
                 Integer.valueOf(serviceClass), Integer.valueOf(timeSeconds));
-        return mCmdManager.addCmd(utAction);
+
+        if (!mCFQueried) {
+            UTAction queryAction = new UTAction(false /* needn't feedback */,
+                    false /* isn't extension */, "queryCallForward", MSG_ACTION_QUERY_CALL_FORWARD,
+                    CMD_TIMEOUT, updateAction, Integer.valueOf(condition), number);
+
+            // Handle query CF first, and then update the CF settings.
+            mCmdManager.addCmd(queryAction);
+        }
+        return mCmdManager.addCmd(updateAction);
     }
 
     /**
@@ -388,9 +407,18 @@ public class ImsUtImpl extends IImsUt.Stub {
     public int updateCallWaiting(boolean enable, int serviceClass) throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Try to update the call waiting to enable: " + enable);
 
-        UTAction action = new UTAction("updateCallWaiting", MSG_ACTION_UPDATE_CALL_WAITING,
+        UTAction updateAction = new UTAction("updateCallWaiting", MSG_ACTION_UPDATE_CALL_WAITING,
                 CMD_TIMEOUT, Boolean.valueOf(enable), Integer.valueOf(serviceClass));
-        return mCmdManager.addCmd(action);
+
+        if (!mCWQueried) {
+            UTAction queryAction = new UTAction(false /* needn't feedback */,
+                    false /* isn't extension */, "queryCallWaiting", MSG_ACTION_QUERY_CALL_WAITING,
+                    CMD_TIMEOUT, updateAction);
+
+            // Handle query CW first, and then update the CW settings.
+            mCmdManager.addCmd(queryAction);
+        }
+        return mCmdManager.addCmd(updateAction);
     }
 
     /**
@@ -457,11 +485,21 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + ", ruleSet: " + ruleSet);
         }
 
-        UTAction action = new UTAction(true /* is extension action */, "setCallForwardingOption",
-                MSG_ACTION_UPDATE_CALL_FORWARDING_OPTION, CMD_TIMEOUT,
+        UTAction updateAction = new UTAction(true /* is extension action */,
+                "setCallForwardingOption", MSG_ACTION_UPDATE_CALL_FORWARDING_OPTION, CMD_TIMEOUT,
                 Integer.valueOf(cfAction), Integer.valueOf(reason), Integer.valueOf(serviceClass),
                 dialNumber, Integer.valueOf(timeSeconds), ruleSet);
-        return mCmdManager.addCmd(action);
+
+        if (!mCFQueried) {
+            UTAction queryAction = new UTAction(false /* needn't feedback */,
+                    true /* is extension action */, "getCallForwardingOption",
+                    MSG_ACTION_QUERY_CALL_FORWARDING_OPTION, CMD_TIMEOUT, updateAction,
+                    Integer.valueOf(reason), Integer.valueOf(serviceClass), ruleSet);
+
+            // Handle query CF first, and then update the CF settings.
+            mCmdManager.addCmd(queryAction);
+        }
+        return mCmdManager.addCmd(updateAction);
     }
 
     /**
@@ -490,10 +528,21 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
 
         int condition = getConditionFromCBReason(facility);
-        UTAction action = new UTAction(true /* is extension action */, "setFacilityLock",
+        UTAction updateAction = new UTAction(true /* is extension action */, "setFacilityLock",
                 MSG_ACTION_SET_FACILITY_LOCK, CMD_TIMEOUT, Integer.valueOf(condition),
-                Boolean.valueOf(lockState), password, Integer.valueOf(serviceClass));
-        return mCmdManager.addCmd(action);
+                Boolean.valueOf(lockState), "", Integer.valueOf(serviceClass));
+
+        if (!mCBQueried) {
+            UTAction queryAction = new UTAction(false /* needn't feedback */,
+                    true /* is extension */, "queryFacilityLock", MSG_ACTION_QUERY_FACILITY_LOCK,
+                    CMD_TIMEOUT, updateAction, Integer.valueOf(condition), password,
+                    Integer.valueOf(serviceClass));
+
+            // Handle query CB first, and then update the CB settings.
+            mCmdManager.addCmd(queryAction);
+        }
+
+        return mCmdManager.addCmd(updateAction);
     }
 
      public int queryFacilityLock(String facility, String password, int serviceClass){
@@ -503,7 +552,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
 
         int condition = getConditionFromCBReason(facility);
-        UTAction action = new UTAction(true /* is extension action */, "queryFacilityLock",
+        UTAction action = new UTAction(true /* is extension */, "queryFacilityLock",
                 MSG_ACTION_QUERY_FACILITY_LOCK, CMD_TIMEOUT, Integer.valueOf(condition), password,
                 Integer.valueOf(serviceClass));
         return mCmdManager.addCmd(action);
@@ -518,6 +567,12 @@ public class ImsUtImpl extends IImsUt.Stub {
         UTAction action = new UTAction(true /* is extension action */, "changeBarringPassword",
                 MSG_ACTION_CHANGE_LOCK_PWD, CMD_TIMEOUT, facility, oldPwd, newPwd);
         return mCmdManager.addCmd(action);
+    }
+
+    public void initQueriedState() {
+        mCWQueried = false;
+        mCFQueried = false;
+        mCBQueried = false;
     }
 
     private void nativeQueryCallBarring(int condition) {
@@ -707,14 +762,17 @@ public class ImsUtImpl extends IImsUt.Stub {
             int eventCode = jObject.optInt(JSONUtils.KEY_EVENT_CODE, -1);
             switch (eventCode) {
                 case JSONUtils.EVENT_CODE_UT_QUERY_CF_OK: {
+                    mCFQueried = true;
                     handleQueryCallForwardOK(parseCallForwardInfos(json));
                     break;
                 }
                 case JSONUtils.EVENT_CODE_UT_QUERY_CB_OK: {
+                    mCBQueried = true;
                     handleQueryCallBarringOK(parseCallBarringInfos(json));
                     break;
                 }
                 case JSONUtils.EVENT_CODE_UT_QUERY_CW_OK: {
+                    mCWQueried = true;
                     boolean enabled = jObject.optBoolean(JSONUtils.KEY_UT_CW_ENABLED, false);
                     handleQueryCallWaitingOK(enabled);
                     break;
@@ -1268,51 +1326,9 @@ public class ImsUtImpl extends IImsUt.Stub {
                 Integer key = mCmds.getFirst();
                 UTAction action = mUTActions.get(key);
                 Log.d(TAG, "Query CF finished, action._action is: " + action._action);
-                if (action._action == MSG_ACTION_QUERY_CALL_FORWARD) {
-                    ImsCallForwardInfo[] infos = getFromEx(
-                            findCallForwardInfoEx(callForwardInfos,
-                                    (Integer) action._params.get(0), // condition
-                                    (String) action._params.get(1), // number
-                                    SERVICE_CLASS_ALL,
-                                    null));
-                    if (infos != null) {
-                        // Find the call forward info for this action.
-                        Log.d(TAG, "Success to query the call forward infos: " + infos);
-                        if (mListener != null) {
-                            mListener.utConfigurationCallForwardQueried(
-                                    ImsUtImpl.this, key, infos);
-                        }
-                    } else {
-                        // Can not find the call forward info for this action.
-                        Log.w(TAG, "Failed to query call forward as can not found matched item.");
-                        if (mListener != null) {
-                            mListener.utConfigurationQueryFailed(
-                                    ImsUtImpl.this, key, new ImsReasonInfo());
-                        }
-                    }
-                } else if (action._action == MSG_ACTION_QUERY_CALL_FORWARDING_OPTION) {
-                    ImsCallForwardInfoEx[] infoExs = findCallForwardInfoEx(callForwardInfos,
-                            getConditionFromCFReason((Integer) action._params.get(0)),
-                            null,
-                            (Integer) action._params.get(1),
-                            (String) action._params.get(2));
-                    if (infoExs != null && infoExs.length > 0) {
-                        // Find the call forward info for this action.
-                        Log.d(TAG, "Success to query the call forward infoExs: " + infoExs);
-                        if (mListenerEx != null) {
-                            mListenerEx.utConfigurationCallForwardQueried(
-                                    ImsUtImpl.this, key, infoExs);
-                        }
-                    } else {
-                        // Can not find the call forward info for this action.
-                        Log.w(TAG, "Failed to query call forward as can not found matched item.");
-                        if (mListenerEx != null) {
-                            mListenerEx.utConfigurationQueryFailed(
-                                    ImsUtImpl.this, key, new ImsReasonInfo());
-                        }
-                    }
-                } else {
-                    Log.e(TAG, "The action do not handle: " + action._action);
+
+                if (action._needFeedback) {
+                    feedbackCFResult(action, callForwardInfos);
                 }
 
                 mUTActions.remove(key);
@@ -1324,7 +1340,57 @@ public class ImsUtImpl extends IImsUt.Stub {
             processPendingAction();
         }
 
-        public void onQueryCallBarringFinished(ArrayList<CallBarringInfo> infolist)
+        private void feedbackCFResult(UTAction action, ArrayList<ImsCallForwardInfo> infoList)
+                throws RemoteException {
+            if (action._action == MSG_ACTION_QUERY_CALL_FORWARD) {
+                ImsCallForwardInfo[] infos = getFromEx(
+                        findCallForwardInfoEx(infoList,
+                                (Integer) action._params.get(0), // condition
+                                (String) action._params.get(1), // number
+                                SERVICE_CLASS_ALL,
+                                null));
+                if (infos != null) {
+                    // Find the call forward info for this action.
+                    Log.d(TAG, "Success to query the call forward infos: " + infos);
+                    if (mListener != null) {
+                        mListener.utConfigurationCallForwardQueried(
+                                ImsUtImpl.this, action._key, infos);
+                    }
+                } else {
+                    // Can not find the call forward info for this action.
+                    Log.w(TAG, "Failed to query call forward as can not found matched item.");
+                    if (mListener != null) {
+                        mListener.utConfigurationQueryFailed(
+                                ImsUtImpl.this, action._key, new ImsReasonInfo());
+                    }
+                }
+            } else if (action._action == MSG_ACTION_QUERY_CALL_FORWARDING_OPTION) {
+                ImsCallForwardInfoEx[] infoExs = findCallForwardInfoEx(infoList,
+                        getConditionFromCFReason((Integer) action._params.get(0)),
+                        null,
+                        (Integer) action._params.get(1),
+                        (String) action._params.get(2));
+                if (infoExs != null && infoExs.length > 0) {
+                    // Find the call forward info for this action.
+                    Log.d(TAG, "Success to query the call forward infoExs: " + infoExs);
+                    if (mListenerEx != null) {
+                        mListenerEx.utConfigurationCallForwardQueried(
+                                ImsUtImpl.this, action._key, infoExs);
+                    }
+                } else {
+                    // Can not find the call forward info for this action.
+                    Log.w(TAG, "Failed to query call forward as can not found matched item.");
+                    if (mListenerEx != null) {
+                        mListenerEx.utConfigurationQueryFailed(
+                                ImsUtImpl.this, action._key, new ImsReasonInfo());
+                    }
+                }
+            } else {
+                Log.e(TAG, "The action do not handle: " + action._action);
+            }
+        }
+
+        public void onQueryCallBarringFinished(ArrayList<CallBarringInfo> infoList)
                 throws RemoteException {
             synchronized (mCmds) {
                 if (!mHandleCmd) {
@@ -1342,24 +1408,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                 Log.d(TAG, "Query call barring finished, action is " + action._action);
 
                 if (action._needFeedback) {
-                    int condition = (Integer) action._params.get(0);
-                    int serviceClass = (Integer) action._params.get(2);
-                    int[] info = findCallBarringInfo(infolist, condition, serviceClass);
-                    // Find the call barring info for this action.
-                    if (info != null && info.length > 0) {
-                        if (mListenerEx != null) {
-                            mListenerEx.utConfigurationCallBarringResult(key, info);
-                            Log.d(TAG, "Success to query the call barring for condition["
-                                    + condition + "] and the state is: " + info[0]);
-                        }
-                    } else {
-                        if (mListenerEx != null) {
-                            mListenerEx.utConfigurationCallBarringFailed(
-                                    key, null, ImsReasonInfo.CODE_UT_NETWORK_ERROR);
-                            Log.w(TAG, "Failed to query the call barring for condition["
-                                    + condition + "] as can not find matched info.");
-                        }
-                    }
+                    feedbackCBResult(action, infoList);
                 }
 
                 mUTActions.remove(key);
@@ -1369,6 +1418,42 @@ public class ImsUtImpl extends IImsUt.Stub {
 
             // After action finished, we need try to start the next pending action.
             processPendingAction();
+        }
+
+        private void feedbackCBResult(UTAction action, ArrayList<CallBarringInfo> infoList)
+                throws RemoteException {
+            int condition = (Integer) action._params.get(0);
+            int serviceClass = (Integer) action._params.get(2);
+            int[] info = findCallBarringInfo(infoList, condition, serviceClass);
+            // Find the call barring info for this action.
+            if (info != null && info.length > 0) {
+                if (action._isExAction && mListenerEx != null) {
+                    mListenerEx.utConfigurationCallBarringResult(action._key, info);
+                    Log.d(TAG, "Success to query the call barring as extension for condition["
+                            + condition + "] and the state is: " + info[0]);
+                } else if (!action._isExAction && mListener != null) {
+                    ImsSsInfo cbInfo = new ImsSsInfo();
+                    cbInfo.mStatus = info[0]; // status
+                    cbInfo.mIcbNum = "";      // ICB number
+                    mListener.utConfigurationCallBarringQueried(
+                            ImsUtImpl.this, action._key, new ImsSsInfo[] { cbInfo } );
+                    Log.d(TAG, "Success to query the call barring for condition["
+                            + condition + "] and the state is: " + info[0]);
+                }
+            } else {
+                if (action._isExAction && mListenerEx != null) {
+                    mListenerEx.utConfigurationCallBarringFailed(
+                            action._key, null, ImsReasonInfo.CODE_UT_NETWORK_ERROR);
+                    Log.w(TAG, "Failed to query the call barring as extension for condition["
+                            + condition + "] as can not find matched info.");
+                } else if (!action._isExAction && mListener != null) {
+                    mListener.utConfigurationQueryFailed(ImsUtImpl.this, action._key,
+                            new ImsReasonInfo(ImsReasonInfo.CODE_UT_NOT_SUPPORTED,
+                                    ImsReasonInfo.CODE_UNSPECIFIED));
+                    Log.w(TAG, "Failed to query the call barring for condition["
+                            + condition + "] as can not find matched info.");
+                }
+            }
         }
 
         public void onQueryCallWaitingFinished(boolean enabled) throws RemoteException {
@@ -1384,7 +1469,10 @@ public class ImsUtImpl extends IImsUt.Stub {
                 }
 
                 Integer key = mCmds.getFirst();
-                if (mListener != null) {
+                UTAction action = mUTActions.get(key);
+                Log.d(TAG, "Query call waiting finished, action is " + action._action);
+
+                if (action._needFeedback && mListener != null) {
                     ImsSsInfo info = new ImsSsInfo();
                     info.mStatus = enabled ? ImsSsInfo.ENABLED : ImsSsInfo.DISABLED;
                     mListener.utConfigurationCallWaitingQueried(ImsUtImpl.this, key,
