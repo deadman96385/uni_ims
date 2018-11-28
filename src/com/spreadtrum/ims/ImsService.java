@@ -2236,6 +2236,17 @@ public class ImsService extends Service {
         public boolean isSupportMobike(){
             return mWifiService.isSupportMobike();
         }
+        /**
+         * Used for get ims CNI infor
+         */
+        @Override
+        public void getImsCNIInfor(){
+            ImsServiceImpl imsService = mImsServiceImplMap.get(
+                    Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+            if(imsService != null){
+                imsService.getImsCNIInfo();
+            }
+        }
     };
 
     private final IImsMultiEndpoint.Stub mImsMultiEndpointBinder = new IImsMultiEndpoint.Stub() {
@@ -3563,4 +3574,8 @@ public class ImsService extends Service {
         return serviceId;
     }
     /*@}*/
+    public void onImsCNIInfoChange(int type, String info, int age){
+        Log.i(TAG, "onImsPaniInfoChange->type:" + type + " info:" + info + " age:" + age);
+        mWifiService.notifyImsCNIInfo(type, info, age);
+    }
 }

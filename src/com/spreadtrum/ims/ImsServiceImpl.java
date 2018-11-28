@@ -125,6 +125,7 @@ public class ImsServiceImpl extends MmTelFeature {
 
     protected static final int EVENT_GET_VIDEO_RESOLUTION              = 120;
     protected static final int EVENT_GET_RAT_CAP                       = 121;
+    protected static final int EVENT_IMS_GET_IMS_CNI_INFO              = 122;
 
     /* UNISOC: add for bug968317 @{ */
     class VoLTECallAvailSyncStatus {
@@ -727,6 +728,13 @@ public class ImsServiceImpl extends MmTelFeature {
                     }
                     break;
                 /*@}*/
+                case EVENT_IMS_GET_IMS_CNI_INFO:
+                    if (ar != null && ar.exception == null && ar.result != null) {
+                        ImsNetworkInfo info = (ImsNetworkInfo)ar.result;
+                        Log.i(TAG,"EVENT_IMS_GET_IMS_CNI_INFO->info.type: " + info.type + " info.info:" + info.info + " info.age:" + info.age);
+                        mImsService.onImsCNIInfoChange(info.type, info.info, info.age);
+                    }
+                    break;
                 default:
                     break;
             }
@@ -1730,4 +1738,8 @@ public class ImsServiceImpl extends MmTelFeature {
         }
     }
     /*@}*/
+
+    public void getImsCNIInfo(){
+        mCi.getImsCNIInfo(mHandler.obtainMessage(EVENT_IMS_GET_IMS_CNI_INFO));
+    }
 }
