@@ -525,8 +525,8 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
                  mIsVideo = false;
              }
              /* @} */
-             //Unisoc: add for Bug 900332 957157
-             if(!isVideoCall(imsCallProfile.mCallType) && (session != null && session.mImsDriverCall != null) ){
+             //Unisoc: add for Bug 900332 957157 967874
+             if(!isVideoCall(imsCallProfile.mCallType) && (session != null && session.mImsDriverCall != null) && !session.mImsDriverCall.isRequestUpgrade() ){
                  onVTConnectionDisconnected(session);
              }
          }
