@@ -1949,4 +1949,12 @@ public final class ImsRIL {
             mRadioInteractor.getSpecialRatcap(result);
         }
     }
+
+    public void getImsCNIInfo(Message response) {
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.getImsPaniInfo(response);
+        } else {
+            riljLog("getImsCNIInfo, RadioInteractor is null");
+        }
+    }
 }
