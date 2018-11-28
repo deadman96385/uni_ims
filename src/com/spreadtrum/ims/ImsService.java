@@ -3477,7 +3477,7 @@ public class ImsService extends Service {
     /**
      * Used for get the serviceId that is responsible for handling switch or HO request to VoWifi.
      */
-    private int getVoWifiServiceId() {
+    public int getVoWifiServiceId() {
         int serviceId = IMS_INVALID_SERVICE_ID;
 
         if (mFeatureSwitchRequest != null) {

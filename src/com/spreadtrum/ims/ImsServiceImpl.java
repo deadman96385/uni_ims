@@ -1259,7 +1259,13 @@ public class ImsServiceImpl extends MmTelFeature {
             log( "setIMSRegAddress addr = " + addr);
         }
         mImsRegAddress = addr;
-        mWifiService.setUsedLocalAddr(addr);
+
+        int phoneCount = TelephonyManager.from(mContext).getPhoneCount();
+        if((mPhone.getPhoneId() == getImsRegister().getPrimaryCard(phoneCount)) || (mServiceId == mImsService.getVoWifiServiceId())) { // SPRD: add for bug974910
+            //update vowifi address for primary sim or vowifi service sim.
+            Log.d(TAG, "setIMSRegAddress update VoWifi addr, phone Id =" + mPhone.getPhoneId() + " vowifiServId =" + mImsService.getVoWifiServiceId());
+            mWifiService.setUsedLocalAddr(addr);
+        }
     }
     public void requestImsHandover(int type){
         log("requestImsHandover->type:" + type);
