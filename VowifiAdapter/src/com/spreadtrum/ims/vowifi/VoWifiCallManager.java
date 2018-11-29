@@ -356,6 +356,10 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
+    public int getCallRatType() {
+        return mCurRatType;
+    }
+
     public void resetCallRatType() {
         mCurRatType = ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN;
     }
@@ -1487,11 +1491,11 @@ public class VoWifiCallManager extends ServiceManager {
                 // Receive 380 from service for a normal call
                 Log.d(TAG, "Start a normal call, but get 380 from service, urnUri: " + urnUri);
                 ImsReasonInfo info = null;
-                String category = EMUtils.getEmergencyCallCategory(urnUri);
-                if (category != null) {
+                int category = EMUtils.getEmergencyCallCategory(urnUri);
+                if (category >= 0) {
                     // Need to retry as an emergency call by cellular.
                     info = new ImsReasonInfo(CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED,
-                            ImsReasonInfo.EXTRA_CODE_CALL_RETRY_NORMAL, category);
+                            ImsReasonInfo.EXTRA_CODE_CALL_RETRY_NORMAL, String.valueOf(category));
                 } else {
                     // Need to retry as an normal call by cellular
                     info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED,

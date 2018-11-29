@@ -7,6 +7,7 @@ import android.database.Cursor;
 import android.database.CursorWrapper;
 import android.net.Uri;
 import android.os.SystemProperties;
+import android.provider.Settings;
 import android.telecom.VideoProfile;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.SubscriptionManager;
@@ -619,15 +620,21 @@ public class Utilities {
         // The default based emergency service urn format
         public static final String DEFAULT_EMERGENCY_SERVICE_URN = "urn:service:sos";
         // Police
-        public static final String EMERGENCY_SERVICE_CATEGORY_BIT1 = "police";
+        public static final String EMERGENCY_CATEGORY_POLICE = "police";
         // Ambulance
-        public static final String EMERGENCY_SERVICE_CATEGORY_BIT2 = "ambulance";
+        public static final String EMERGENCY_CATEGORY_AMBULANCE = "ambulance";
         // Fire Brigade
-        public static final String EMERGENCY_SERVICE_CATEGORY_BIT3 = "fire";
+        public static final String EMERGENCY_CATEGORY_FIRE = "fire";
         // Marine Guard
-        public static final String EMERGENCY_SERVICE_CATEGORY_BIT4 = "marine";
+        public static final String EMERGENCY_CATEGORY_MARINE = "marine";
         // Mountain Rescue
-        public static final String EMERGENCY_SERVICE_CATEGORY_BIT5 = "mountain";
+        public static final String EMERGENCY_CATEGORY_MOUNTAIN = "mountain";
+
+        public static final int CATEGORY_VALUE_POLICE = 1;
+        public static final int CATEGORY_VALUE_AMBULANCE = 2;
+        public static final int CATEGORY_VALUE_FIRE = 4;
+        public static final int CATEGORY_VALUE_MARINE = 8;
+        public static final int CATEGORY_VALUE_MOUNTAIN = 16;
 
         /**
          * byte to inverted bit
@@ -638,34 +645,72 @@ public class Utilities {
                     + (byte) ((b >> 6) & 0x1) + (byte) ((b >> 7) & 0x1);
         }
 
-        public static String getEmergencyCallUrn(String category) {
-            if (DEBUG)
-                Log.i(TAG, "Get the emergency call's urn, category: " + category);
+        public static String getUrnWithPhoneNumber(Context context, String phoneNumber) {
+            if (context == null || TextUtils.isEmpty(phoneNumber)) {
+                return EMUtils.DEFAULT_EMERGENCY_SERVICE_URN;
+            }
+
+            String realEccList = Settings.Global.getString(context.getContentResolver(),
+                    "ecc_list_real" + getPrimaryCard(context));
+            if (TextUtils.isEmpty(realEccList)) {
+                return EMUtils.DEFAULT_EMERGENCY_SERVICE_URN;
+            }
+
+            HashMap<String, String> eccList = parserEccList(realEccList);
+            String category = eccList.get(phoneNumber);
             if (TextUtils.isEmpty(category)) {
+                return EMUtils.DEFAULT_EMERGENCY_SERVICE_URN;
+            } else {
+                return category;
+            }
+        }
+
+        private static HashMap<String, String> parserEccList(String eccList) {
+            HashMap<String, String> eccListMap = new HashMap<String, String>();
+
+            String[] eccNumbers = eccList.split(",");
+            for (String eccNumber : eccNumbers) {
+                String[] eccInfo = eccNumber.split("@");
+                if (eccInfo.length != 2) {
+                    Log.w(TAG, "The current ecc info as this: " + eccNumber + ". INVALID!!!");
+                    continue;
+                } else {
+                    String urn = EMUtils.getEmergencyCallUrn(eccInfo[1]);
+                    eccListMap.put(eccInfo[0], urn);
+                    Log.d(TAG, "Handle ecc number " + eccInfo[0] + " as urn: " + urn);
+                }
+            }
+            return eccListMap;
+        }
+
+        public static String getEmergencyCallUrn(String categoryNumber) {
+            if (DEBUG) Log.i(TAG, "Get the emergency call's urn, category: " + categoryNumber);
+
+            if (TextUtils.isEmpty(categoryNumber)) {
                 Log.w(TAG, "The category is empty, return the default urn.");
                 return DEFAULT_EMERGENCY_SERVICE_URN;
             }
 
             String urnUri = DEFAULT_EMERGENCY_SERVICE_URN;
             try {
-                int categoryValue = Integer.parseInt(category);
+                int categoryValue = Integer.parseInt(categoryNumber);
                 if ((categoryValue > 0) && (categoryValue < 128)) {
                     byte categoryByte = (byte) categoryValue;
                     String categoryBitString = byteToInvertedBit(categoryByte);
                     if (categoryBitString.charAt(0) == '1') {
-                        urnUri = urnUri.concat(".").concat(EMERGENCY_SERVICE_CATEGORY_BIT1);
+                        urnUri = urnUri.concat(".").concat(EMERGENCY_CATEGORY_POLICE);
                     }
                     if (categoryBitString.charAt(1) == '1') {
-                        urnUri = urnUri.concat(".").concat(EMERGENCY_SERVICE_CATEGORY_BIT2);
+                        urnUri = urnUri.concat(".").concat(EMERGENCY_CATEGORY_AMBULANCE);
                     }
                     if (categoryBitString.charAt(2) == '1') {
-                        urnUri = urnUri.concat(".").concat(EMERGENCY_SERVICE_CATEGORY_BIT3);
+                        urnUri = urnUri.concat(".").concat(EMERGENCY_CATEGORY_FIRE);
                     }
                     if (categoryBitString.charAt(3) == '1') {
-                        urnUri = urnUri.concat(".").concat(EMERGENCY_SERVICE_CATEGORY_BIT4);
+                        urnUri = urnUri.concat(".").concat(EMERGENCY_CATEGORY_MARINE);
                     }
                     if (categoryBitString.charAt(4) == '1') {
-                        urnUri = urnUri.concat(".").concat(EMERGENCY_SERVICE_CATEGORY_BIT5);
+                        urnUri = urnUri.concat(".").concat(EMERGENCY_CATEGORY_MOUNTAIN);
                     }
                 }
             } catch (NumberFormatException e) {
@@ -675,35 +720,38 @@ public class Utilities {
             return urnUri;
         }
 
-        public static String getEmergencyCallCategory(String urnUri) {
-            if (Utilities.DEBUG) Log.i(TAG, "Get the emergency call's category, urn: " + urnUri);
+        public static int getEmergencyCallCategory(String urnUri) {
+            if (DEBUG) Log.i(TAG, "Get the emergency call's category from urn: " + urnUri);
 
             if (TextUtils.isEmpty(urnUri)) {
-                Log.w(TAG, "The urn uri is empty, return null.");
-                return null;
+                Log.w(TAG, "The urn uri is empty, return -1.");
+                return -1;
             }
 
             int category = 0;
             String urnLowerCase = urnUri.toLowerCase();
-            if (urnLowerCase.startsWith(DEFAULT_EMERGENCY_SERVICE_URN)) {
-                if (urnLowerCase.indexOf(EMERGENCY_SERVICE_CATEGORY_BIT1) > 0) {
-                    category += 1;
+            if (urnLowerCase.equals(DEFAULT_EMERGENCY_SERVICE_URN)) {
+                return 0;
+            } else if (urnLowerCase.startsWith(DEFAULT_EMERGENCY_SERVICE_URN)) {
+                if (urnLowerCase.indexOf(EMERGENCY_CATEGORY_POLICE) > 0) {
+                    category = category | CATEGORY_VALUE_POLICE;
                 }
-                if (urnLowerCase.indexOf(EMERGENCY_SERVICE_CATEGORY_BIT2) > 0) {
-                    category += 2;
+                if (urnLowerCase.indexOf(EMERGENCY_CATEGORY_AMBULANCE) > 0) {
+                    category = category | CATEGORY_VALUE_AMBULANCE;
                 }
-                if (urnLowerCase.indexOf(EMERGENCY_SERVICE_CATEGORY_BIT3) > 0) {
-                    category += 4;
+                if (urnLowerCase.indexOf(EMERGENCY_CATEGORY_FIRE) > 0) {
+                    category = category | CATEGORY_VALUE_FIRE;
                 }
-                if (urnLowerCase.indexOf(EMERGENCY_SERVICE_CATEGORY_BIT4) > 0) {
-                    category += 8;
+                if (urnLowerCase.indexOf(EMERGENCY_CATEGORY_MARINE) > 0) {
+                    category = category | CATEGORY_VALUE_MARINE;
                 }
-                if (urnLowerCase.indexOf(EMERGENCY_SERVICE_CATEGORY_BIT5) > 0) {
-                    category += 16;
+                if (urnLowerCase.indexOf(EMERGENCY_CATEGORY_MOUNTAIN) > 0) {
+                    category = category | CATEGORY_VALUE_MOUNTAIN;
                 }
+                Log.d(TAG, "Get the emergency call's category as: " + category);
             }
 
-            return String.valueOf(category);
+            return category;
         }
     }
 
@@ -1370,8 +1418,9 @@ public class Utilities {
         // AIDL - please update the first version number.
         // Native - please update the second version number.
         // Others - please update the third version number.
-        public static final String NUMBER = "1.0.0";
-        public static final String DETAIL = "Init";
+        public static final String NUMBER = "1.0.1";
+        //public static final String DETAIL = "Init";
+        public static final String DETAIL = "Get the urn from DB if there isn't category info.";
 
         public static String getVersionInfo() {
             return NUMBER + "[" + DETAIL + "]";

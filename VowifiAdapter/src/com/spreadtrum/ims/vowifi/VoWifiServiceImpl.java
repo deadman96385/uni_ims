@@ -131,7 +131,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     securityForceStop();
                     break;
                 case MSG_ATTACH:
-                    attachInternal((Boolean) msg.obj);
+                    attachInternal((Boolean) msg.obj, mUsedLocalAddr);
                     break;
                 case MSG_DEATTACH:
                     boolean forHandover = (Boolean) msg.obj;
@@ -269,7 +269,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                         break;
                     }
                 case ECBMRequest.ECBM_STEP_ATTACH_NORMAL:
-                    attachInternal(false /* is not handover */);
+                    attachInternal(false /* is not handover */, "");
                     break;
                 case ECBMRequest.ECBM_STEP_REGISTER_SOS:
                 case ECBMRequest.ECBM_STEP_REGISTER_NORMAL:
@@ -452,8 +452,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         mHandler.sendMessage(mHandler.obtainMessage(MSG_ATTACH, isHandover));
     }
 
-    private void attachInternal(boolean isHandover) {
+    private void attachInternal(boolean isHandover, String localAddr) {
         Log.d(mTag, "Attach on the version: " + Utilities.Version.getVersionInfo());
+
         // Before start attach process, need get the SIM account info.
         // We will always use the primary card to attach and register now.
         mPhoneId = Utilities.getPrimaryCard(mContext);
@@ -465,7 +466,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         }
 
         int s2bType = mEcbmStep == ECBMRequest.ECBM_STEP_ATTACH_SOS ? S2bType.SOS : S2bType.NORMAL;
-        mSecurityMgr.attach(isHandover, mSubId, s2bType, mUsedLocalAddr, mSecurityListener);
+        mSecurityMgr.attach(isHandover, mSubId, s2bType, localAddr, mSecurityListener);
     }
 
     public void deattach() {

@@ -2132,9 +2132,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
         String peerNumber = callee;
         if (mIsEmergency) {
-            peerNumber = EMUtils.getEmergencyCallUrn(
-                    mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
-            Log.d(TAG, "Start an emergency call with peerNumber: " + peerNumber);
+            String category = mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO);
+            if (TextUtils.isEmpty(category)) {
+                peerNumber = EMUtils.getUrnWithPhoneNumber(mContext, callee);
+            } else {
+                peerNumber = EMUtils.getEmergencyCallUrn(category);
+            }
+            Log.d(TAG, "Start an emergency call with urn: " + peerNumber);
         }
         // Start the call.
         int clirMode =
