@@ -27,6 +27,11 @@ import android.telephony.CarrierConfigManagerEx;
 import static com.android.internal.telephony.CommandsInterface.SERVICE_CLASS_VOICE;
 import static com.android.internal.telephony.CommandsInterface.SERVICE_CLASS_NONE;
 import android.os.PersistableBundle;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import android.content.Intent;
+import com.android.internal.telephony.TelephonyIntents;
+import com.android.internal.telephony.IccCardConstants;
 
 public class ImsUtProxy extends IImsUt.Stub {
     private static final String TAG = ImsUtProxy.class.getSimpleName();
@@ -71,7 +76,6 @@ public class ImsUtProxy extends IImsUt.Stub {
     private static final String EXTRA_LOCK_STATE = "lockState";
     private static final String EXTRA_CLIR_MODE = "clirMode";
     private static final String EXTRA_BARR_LIST = "barrList";
-
     private com.spreadtrum.ims.ut.ImsUtImpl mVoLTEUtImpl;
     private com.spreadtrum.ims.vowifi.ImsUtImpl mVoWifiUtImpl;
     private IImsUtListener mListener;
@@ -83,14 +87,45 @@ public class ImsUtProxy extends IImsUt.Stub {
     private Phone mPhone;
     private HashMap<Integer, Bundle> mPendingMap = new HashMap<Integer, Bundle>();
     private HashMap<Integer, Integer> mQueryOnVoLTEId = new HashMap<Integer, Integer>();
+
     public ImsUtProxy(Context context, com.spreadtrum.ims.ut.ImsUtImpl VoLTEUtImpl,
             com.spreadtrum.ims.vowifi.ImsUtImpl VoWifiUtImpl, Phone phone) {
         mContext = context;
         mVoLTEUtImpl = VoLTEUtImpl;
         mVoWifiUtImpl = VoWifiUtImpl;
         mPhone = phone;
+        registerReceiver();
+    }
+    /* UNISOC: add for bug971872 @{ */
+    private BroadcastReceiver mSimChangeReceiver = new BroadcastReceiver() {
+           @Override
+           public void onReceive(Context context, Intent intent) {
+                // TODO Auto-generated method stub
+                String action = intent.getAction();
+                log("onReceive action = " + action);
+                if (TelephonyIntents.ACTION_SIM_STATE_CHANGED.equals(action)) {
+                   Bundle extras = intent.getExtras();
+                   boolean simLoaded = (extras != null) && IccCardConstants.INTENT_VALUE_ICC_LOADED.equals(extras.getString(IccCardConstants.INTENT_KEY_ICC_STATE));
+                   log("onReceive simLoaded = " + simLoaded);
+                   if (simLoaded) {
+                       onRecordsLoaded();
+                   }
+                 }
+          }
+    };
+
+    public void registerReceiver() {
+            IntentFilter filter = new IntentFilter(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
+            mContext.registerReceiver(mSimChangeReceiver, filter);
     }
 
+    @Override
+    protected void finalize() throws Throwable {
+        //unregister listener
+        mContext.unregisterReceiver(mSimChangeReceiver);
+        super.finalize();
+    }
+    /* @} */
     /**
      * Closes the object. This object is not usable after being closed.
      */
@@ -477,6 +512,23 @@ public class ImsUtProxy extends IImsUt.Stub {
     public void setListener(IImsUtListener listener) {
         mListener = listener;
 
+        String carrier = getSimCarrier();
+        if (!TextUtils.isEmpty(carrier)) {
+            getUTConfig(carrier);
+        }
+
+        try {
+            if (mVoWifiUtImpl != null) {
+                mVoWifiUtImpl.setListener(mImsUtListener);
+            }
+            mVoLTEUtImpl.setListener(mImsUtListener);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /* UNISOC: add for bug971872 @{ */
+    public String getSimCarrier(){
         TelephonyManager tm = TelephonyManager.from(mContext);
         String carrier = tm.getSimOperatorNumericForPhone(mPhone.getPhoneId());
         String impi = null;
@@ -499,20 +551,16 @@ public class ImsUtProxy extends IImsUt.Stub {
              log("listener impi carrier = " + carrier);
             }
         }
+        return carrier;
+    }
 
+    private void onRecordsLoaded() {
+        String carrier = getSimCarrier();
         if (!TextUtils.isEmpty(carrier)) {
             getUTConfig(carrier);
         }
-
-        try {
-            if (mVoWifiUtImpl != null) {
-                mVoWifiUtImpl.setListener(mImsUtListener);
-            }
-            mVoLTEUtImpl.setListener(mImsUtListener);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
     }
+    /* @} */
 
     /**
      * Retrieves the configuration of the call forward.
@@ -1236,6 +1284,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         @Override
         public void utConfigurationCallWaitingQueried(IImsUt ut,
                 int id, ImsSsInfo[] cwInfo) {
+
             Integer resultId = mQueryOnVoLTEId.remove(id);
             if (resultId != null) {
                 id = resultId;

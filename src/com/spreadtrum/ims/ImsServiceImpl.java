@@ -368,7 +368,7 @@ public class ImsServiceImpl extends MmTelFeature {
         mImsServiceState = new ImsServiceState(false,IMS_REG_STATE_INACTIVE);
         mImsConfigImpl = new ImsConfigImpl(mCi,context,this,mServiceId); // SPRD: bug805154
         mImsUtImpl = new ImsUtImpl(mCi,phone.getContext(),phone,this);
-        com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =  mWifiService.getUtInterface();
+        com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =  mWifiService.getUtInterface(phone.getPhoneId());
         mImsUtProxy = new ImsUtProxy(context, mImsUtImpl, voWifiUtImpl, phone);
         mImsEcbmImpl = new ImsEcbmImpl(mCi);
         mHandler = new ImsHandler(mContext.getMainLooper());
