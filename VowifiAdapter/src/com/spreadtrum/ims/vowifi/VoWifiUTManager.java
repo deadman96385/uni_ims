@@ -14,6 +14,7 @@ import com.spreadtrum.ims.vowifi.Utilities.SecurityConfig;
 import com.spreadtrum.ims.vowifi.VoWifiSecurityManager.SecurityListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class VoWifiUTManager extends ServiceManager {
     private static final String TAG = Utilities.getTag(VoWifiUTManager.class.getSimpleName());
@@ -32,6 +33,7 @@ public class VoWifiUTManager extends ServiceManager {
     private SecurityConfig mSecurityConfig;
     private VoWifiSecurityManager mSecurityMgr;
     private MySecurityListener mSecurityListener;
+    private HashMap<Integer, ImsUtImpl> mUtImpls = new HashMap<Integer, ImsUtImpl>();
 
     private IVoWifiUT mIUT;
     private ArrayList<UTStateChangedListener> mIUTChangedListeners =
@@ -70,6 +72,20 @@ public class VoWifiUTManager extends ServiceManager {
         for (UTStateChangedListener listener : mIUTChangedListeners) {
             listener.onInterfaceChanged(mIUT);
         }
+    }
+
+    public ImsUtImpl getUtImpl(Integer phoneId) {
+        ImsUtImpl utImpl = mUtImpls.get(phoneId);
+        if (utImpl == null){
+            utImpl = new ImsUtImpl(mContext, this, phoneId);
+            mUtImpls.put(phoneId, utImpl);
+        }
+
+        return utImpl;
+    }
+
+    public void initState(Integer phoneId) {
+        getUtImpl(phoneId).initQueriedState();
     }
 
     public boolean registerUTInterfaceChanged(UTStateChangedListener listener) {

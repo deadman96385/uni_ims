@@ -54,6 +54,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     // If there isn't any CMD to disabled the UT after 1min.
     private static final int DELAY_DISALBE_UT = 60 * 1000;
 
+    private int mPhoneId;
     private Context mContext;
     private boolean mUtEnabled;
 
@@ -222,10 +223,11 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
     };
 
-    protected ImsUtImpl(Context context, VoWifiUTManager utManager) {
+    protected ImsUtImpl(Context context, VoWifiUTManager utManager, int phoneId) {
         mContext = context;
-        mCmdManager = new CmdManager();
         mUtManager = utManager;
+        mPhoneId = phoneId;
+        mCmdManager = new CmdManager();
 
         // Register the service changed to get the IVowifiService.
         mUtManager.registerUTInterfaceChanged(mIUTChangedListener);

@@ -61,6 +61,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     protected int mEcbmStep = ECBMRequest.ECBM_STEP_INVALID;
     protected int mCmdAttachState = CMD_STATE_INVALID;
     protected int mCmdRegisterState = CMD_STATE_INVALID;
+    protected int mPhoneId = -1;
     protected int mSubId = -1;
     protected boolean mIsSRVCCSupport = true;
     protected boolean mNeedLogoutAfterCall = false;
@@ -72,7 +73,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     protected VoWifiCallback mCallback = null;
     protected ECBMRequest mECBMRequest = null;
 
-    protected ImsUtImpl mImsUt;
+
     protected ImsEcbmImpl mImsEcbm;
     protected UtSyncManager mUtSyncMgr;
     protected VoWifiCallManager mCallMgr;
@@ -384,15 +385,15 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
      * Ut interface for the supplementary service configuration.
      */
     public ImsUtImpl getUtInterface() {
+        return getUtInterface(Utilities.getPrimaryCard(mContext));
+    }
+
+    public ImsUtImpl getUtInterface(int phoneId) {
         if (mUTMgr == null || !ImsManager.isWfcEnabledByPlatform(mContext)) {
             return null;
         }
 
-        if (mImsUt == null) {
-            mImsUt = new ImsUtImpl(mContext, mUTMgr);
-        }
-
-        return mImsUt;
+        return mUTMgr.getUtImpl(phoneId);
     }
 
     public ImsEcbmImpl getEcbmInterface() {
@@ -454,7 +455,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private void attachInternal(boolean isHandover) {
         // Before start attach process, need get the SIM account info.
         // We will always use the primary card to attach and register now.
-        mSubId = Utilities.getPrimaryCardSubId(mContext);
+        mPhoneId = Utilities.getPrimaryCard(mContext);
+        mSubId = Utilities.getSubId(mPhoneId);
         if (mSubId < 0) {
             Log.e(mTag, "Can not get the sub id.");
             if (mCallback != null) mCallback.onAttachFinished(false, 0);
@@ -845,7 +847,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         // When register success, sync the UT items.
         if (mUtSyncMgr != null) mUtSyncMgr.sync();
         // When register success, initialize the queried state.
-        if (mImsUt != null) mImsUt.initQueriedState();
+        if (mUTMgr != null) mUTMgr.initState(mPhoneId);
 
         if (mCallMgr != null) {
             // As login success, we need set the video quality, and reset the rat type.
