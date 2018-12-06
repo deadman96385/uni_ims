@@ -170,6 +170,7 @@ public class ImsServiceImpl extends MmTelFeature {
     //add for unisoc 911545
     private MmTelCapabilities mDeviceVolteCapabilities = new MmTelCapabilities();
     private MmTelCapabilities mDeviceVowifiCapabilities = new MmTelCapabilities();
+    private final Object mCapabilitiesLock = new Object(); // UNISOC: Add for bug978339
     private int mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;  // UNISOC: Add for bug950573
     /* UNISOC: add for bug968317 @{ */
     private int VoLTECallAvailSync = VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_IDLE;
@@ -248,51 +249,53 @@ public class ImsServiceImpl extends MmTelFeature {
         List<CapabilityChangeRequest.CapabilityPair> enableCap = request.getCapabilitiesToEnable();
         List<CapabilityChangeRequest.CapabilityPair> disableCap = request.getCapabilitiesToDisable();
         log("changeEnabledCapabilities->enableCap:" + enableCap + "/n disableCap:"+disableCap);
-        for(CapabilityChangeRequest.CapabilityPair pair: enableCap) {
-            if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_LTE) {
-                //add for unisoc 911545
-                mDeviceVolteCapabilities.addCapabilities(pair.getCapability());
-            } else if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN) {
-                mDeviceVowifiCapabilities.addCapabilities(pair.getCapability());
+        synchronized (mCapabilitiesLock) {   // UNISOC: Add for bug978339
+            for (CapabilityChangeRequest.CapabilityPair pair : enableCap) {
+                if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_LTE) {
+                    //add for unisoc 911545
+                    mDeviceVolteCapabilities.addCapabilities(pair.getCapability());
+                } else if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN) {
+                    mDeviceVowifiCapabilities.addCapabilities(pair.getCapability());
+                }
             }
-        }
 
-        for(CapabilityChangeRequest.CapabilityPair pair: disableCap) {
-            if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_LTE) {
-                //add for unisoc 911545
-                mDeviceVolteCapabilities.removeCapabilities(pair.getCapability());
-            } else if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN) {
-                mDeviceVowifiCapabilities.removeCapabilities(pair.getCapability());
+            for (CapabilityChangeRequest.CapabilityPair pair : disableCap) {
+                if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_LTE) {
+                    //add for unisoc 911545
+                    mDeviceVolteCapabilities.removeCapabilities(pair.getCapability());
+                } else if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN) {
+                    mDeviceVowifiCapabilities.removeCapabilities(pair.getCapability());
+                }
             }
-        }
-        /* UNISOC: modify for bug968317 @{ */
-        //add for unisoc 900059,911545
-        int newVoLTESetting;
-        if(mDeviceVolteCapabilities.isCapable(MmTelCapabilities.CAPABILITY_TYPE_VOICE)){
-            log("changeEnabledCapabilities-> setImsVoiceCallAvailability on");
-            newVoLTESetting = ImsConfig.FeatureValueConstants.ON;
-        } else {
-            log("changeEnabledCapabilities-> setImsVoiceCallAvailability off");
-            newVoLTESetting = ImsConfig.FeatureValueConstants.OFF;
-        }
-
-        if(VoLTECallAvailSync != VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_ONGOING) {
-            currentVoLTESetting = newVoLTESetting;
-            setVoLTECallAvailablity();
-        } else {
-            if(newVoLTESetting != currentVoLTESetting) {
-                pendingVoLTESetting = newVoLTESetting;
+            /* UNISOC: modify for bug968317 @{ */
+            //add for unisoc 900059,911545
+            int newVoLTESetting;
+            if (mDeviceVolteCapabilities.isCapable(MmTelCapabilities.CAPABILITY_TYPE_VOICE)) {
+                log("changeEnabledCapabilities-> setImsVoiceCallAvailability on");
+                newVoLTESetting = ImsConfig.FeatureValueConstants.ON;
             } else {
-                pendingVoLTESetting = IMS_INVALID_VOLTE_SETTING;
+                log("changeEnabledCapabilities-> setImsVoiceCallAvailability off");
+                newVoLTESetting = ImsConfig.FeatureValueConstants.OFF;
             }
-        }
-        /*@}*/
-        /*@}*/
 
-        if(isVoWifiEnabled()) {
-            notifyCapabilitiesStatusChanged(mDeviceVowifiCapabilities);
-        } else {
-            notifyCapabilitiesStatusChanged(mDeviceVolteCapabilities);
+            if (VoLTECallAvailSync != VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_ONGOING) {
+                currentVoLTESetting = newVoLTESetting;
+                setVoLTECallAvailablity();
+            } else {
+                if (newVoLTESetting != currentVoLTESetting) {
+                    pendingVoLTESetting = newVoLTESetting;
+                } else {
+                    pendingVoLTESetting = IMS_INVALID_VOLTE_SETTING;
+                }
+            }
+            /*@}*/
+            /*@}*/
+
+            if (isVoWifiEnabled()) {
+                notifyCapabilitiesStatusChanged(mDeviceVowifiCapabilities);
+            } else {
+                notifyCapabilitiesStatusChanged(mDeviceVolteCapabilities);
+            }
         }
     }
 
@@ -1366,84 +1369,86 @@ public class ImsServiceImpl extends MmTelFeature {
     public void updateImsFeatures(boolean volteEnable, boolean wifiEnable){
         log("updateImsFeatures->volteEnable:" + volteEnable + " wifiEnable:" + wifiEnable+" id:"+mServiceId);
         ImsManager imsManager = ImsManager.getInstance(mContext,mPhone.getPhoneId());
-        try{
-            if(volteEnable){
-                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-                mVolteCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VOICE);
-                mVolteCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
-                if(imsManager.isVtEnabledByUser() && imsManager.isVtEnabledByPlatform()){//SPRD:modify for bug805161
-                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE;
-                    mVolteCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
-                }else{
+        synchronized (mCapabilitiesLock) {   // UNISOC: Add for bug978339
+            try {
+                if (volteEnable) {
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
+                    mVolteCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VOICE);
+                    mVolteCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
+                    if (imsManager.isVtEnabledByUser() && imsManager.isVtEnabledByPlatform()) {//SPRD:modify for bug805161
+                        mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
+                                = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE;
+                        mVolteCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
+                    } else {
+                        mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
+                                = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                        mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
+                    }
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE;
+                    notifyCapabilitiesStatusChanged(mVolteCapabilities);
+                } else {
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                    mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VOICE);
+                    mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
+                    mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_SMS);
                     mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
                 }
-                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE;
-                notifyCapabilitiesStatusChanged(mVolteCapabilities);
-            } else {
-                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VOICE);
-                mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
-                mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_SMS);
-                mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
-            }
-            if(wifiEnable){
-                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-                mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VOICE);
-                mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
-                mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_SMS);
-                if(imsManager.isVtEnabledByUser() && imsManager.isVtEnabledByPlatform()){//SPRD:modify for bug810321
-                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
-                            = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI;
-                    mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
-                }else{
+                if (wifiEnable) {
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
+                    mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VOICE);
+                    mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
+                    mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_SMS);
+                    if (imsManager.isVtEnabledByUser() && imsManager.isVtEnabledByPlatform()) {//SPRD:modify for bug810321
+                        mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
+                                = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI;
+                        mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
+                    } else {
+                        mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
+                                = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                        mVowifiCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
+                    }
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI;
+                    notifyCapabilitiesStatusChanged(mVowifiCapabilities);
+                } else {
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                    mVowifiCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                 }
-                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI;
-                notifyCapabilitiesStatusChanged(mVowifiCapabilities);
-            } else {
-                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-            }
-            synchronized (mImsRegisterListeners) {
-                for (IImsRegistrationListener l : mImsRegisterListeners.values()) {
-                    l.registrationFeatureCapabilityChanged(
-                            ImsServiceClass.MMTEL,mEnabledFeatures, mDisabledFeatures);
+                synchronized (mImsRegisterListeners) {
+                    for (IImsRegistrationListener l : mImsRegisterListeners.values()) {
+                        l.registrationFeatureCapabilityChanged(
+                                ImsServiceClass.MMTEL, mEnabledFeatures, mDisabledFeatures);
+                    }
                 }
-            }
-            if(!volteEnable && !wifiEnable){
-                notifyCapabilitiesStatusChanged(mVolteCapabilities);
-            }
+                if (!volteEnable && !wifiEnable) {
+                    notifyCapabilitiesStatusChanged(mVolteCapabilities);
+                }
 
-            //wifi capability caused by a handover for bug837323 { */
-            updateImsCallProfile(wifiEnable);
+                //wifi capability caused by a handover for bug837323 { */
+                updateImsCallProfile(wifiEnable);
 
-            if(mListener == null){
-                log("updateImsFeatures mListener is null!");
-                return;
+                if (mListener == null) {
+                    log("updateImsFeatures mListener is null!");
+                    return;
+                }
+                mListener.registrationFeatureCapabilityChanged(
+                        ImsServiceClass.MMTEL, mEnabledFeatures, mDisabledFeatures);
+
+            } catch (RemoteException e) {
+                e.printStackTrace();
             }
-            mListener.registrationFeatureCapabilityChanged(
-                    ImsServiceClass.MMTEL,mEnabledFeatures, mDisabledFeatures);
-
-        } catch (RemoteException e){
-            e.printStackTrace();
         }
     }
 
