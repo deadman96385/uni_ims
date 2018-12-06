@@ -33,6 +33,7 @@ import android.telephony.TelephonyManager;
 import android.telephony.CarrierConfigManagerEx;
 import android.telephony.SubscriptionManager;
 import com.android.ims.internal.ImsManagerEx;
+import com.android.ims.ImsManager;
 
 public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallProvider {
     private static final String TAG = ImsVideoCallProvider.class.getSimpleName();
@@ -569,7 +570,9 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 }
 
                 /*SPRD: add for bug606122, 605475, 676047@{*/
-                if(!TelephonyManager.getDefault().isVideoCallingEnabled()
+                ImsManager imsManager = ImsManager.getInstance(mContext, (mImsCallSessionImpl.getServiceId()-1));
+                if(!(imsManager.isVtEnabledByUserForSlot() && imsManager.isVtEnabledByPlatformForSlot()
+                        && imsManager.isEnhanced4gLteModeSettingEnabledByUserForSlot())
                         || (ImsManagerEx.isDualVoLTEActive() && mImsCallSessionImpl.mImsServiceCallTracker.isHasBackgroundCallAndActiveCall()) // SPRD:add for bug696648
                         || (ImsManagerEx.isDualVoLTEActive() && mImsCallSessionImpl.mImsServiceCallTracker.moreThanOnePhoneHasCall()) // SPRD:add for bug696648
                         || mImsCallSessionImpl.getCurrentUserId() != UserHandle.USER_OWNER
