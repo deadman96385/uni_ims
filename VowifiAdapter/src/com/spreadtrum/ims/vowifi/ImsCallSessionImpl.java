@@ -495,7 +495,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             throws RemoteException {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Initiates an ims conference call with participants: "
-                    + Utilities.getString(participants));
+                    + Utilities.getStringFromArray(participants));
         }
 
         // As do not support now. Handle it as action failed.
@@ -939,7 +939,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     @Override
     public void inviteParticipants(String[] participants) throws RemoteException {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Invite participants: " + Utilities.getString(participants));
+            Log.i(TAG, "Invite participants: " + Utilities.getStringFromArray(participants));
         }
 
         // TODO: if need check this participants contains this session's callee.
@@ -989,7 +989,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     @Override
     public void removeParticipants(String[] participants) throws RemoteException {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Remove the participants: " + Utilities.getString(participants));
+            Log.i(TAG, "Remove the participants: " + Utilities.getStringFromArray(participants));
         }
 
         if (participants == null || participants.length < 1) {

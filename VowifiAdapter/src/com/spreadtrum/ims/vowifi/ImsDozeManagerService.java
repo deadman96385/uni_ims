@@ -20,7 +20,7 @@ public class ImsDozeManagerService extends Service {
 
     private IBinder mBinder = new ImsDozeManagerImpl(this);
 
-    private boolean mImsDozeEnabled = false;
+    private boolean mImsDozeEnabled = true;
     private ArrayList<IImsDozeObserver> mObserverList = new ArrayList<IImsDozeObserver>();
 
     private static final int MSG_NOTIFY = 1;
