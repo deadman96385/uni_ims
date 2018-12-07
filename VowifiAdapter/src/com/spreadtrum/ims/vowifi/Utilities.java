@@ -104,18 +104,18 @@ public class Utilities {
         return SystemProperties.getBoolean(PROP_KEY_SS_CW, true);
     }
 
-    public static String getString(String[] items) {
+    public static String getStringFromArray(Object[] items) {
         if (items == null || items.length < 1) {
-            return "null";
+            return "{null}";
         }
 
-        StringBuilder builder = new StringBuilder("[");
-        builder.append(items[0]);
+        StringBuilder builder = new StringBuilder("{[0]");
+        builder.append(items[0].toString());
         for (int i = 1; i < items.length; i++) {
-            builder.append(",");
-            builder.append(items[i]);
+            builder.append(" | [" + i + "]");
+            builder.append(items[i].toString());
         }
-        builder.append("]");
+        builder.append("}");
         return builder.toString();
     }
 

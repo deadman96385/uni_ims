@@ -21,11 +21,12 @@ public class VoWifiUTManager extends ServiceManager {
 
     public interface UTStateChangedListener {
         public void onInterfaceChanged(IVoWifiUT newServiceInterface);
-        public void onPrepareFinished(boolean success);
-        public void onDisabled();
+        public void onPrepareFinished(int subId, boolean success);
+        public void onDisabled(int subId);
     }
 
     private int mSessionId = -1;
+    private int mSubId = -1;
     private int mRegisterState = RegisterState.STATE_IDLE;
     private int mCurIPVersion = IPVersion.NONE;
     private int mCurRegIPVersion = IPVersion.NONE;
@@ -122,7 +123,7 @@ public class VoWifiUTManager extends ServiceManager {
             if (subId < 0 || mRegisterState != RegisterState.STATE_CONNECTED) {
                 // Do not register now. set as prepare failed.
                 resetConfig();
-                notifyPrepareResult(false);
+                notifyPrepareResult(subId, false);
                 return;
             } else if (mInAttaching) {
                 Log.d(TAG, "Already in attaching process, ignore the prepare action.");
@@ -131,6 +132,7 @@ public class VoWifiUTManager extends ServiceManager {
 
             // Start the attach process for UT.
             mInAttaching = true;
+            mSubId = subId;
             mSecurityMgr.attach(false, subId, S2bType.UT, null, mSecurityListener);
         }
     }
@@ -180,16 +182,16 @@ public class VoWifiUTManager extends ServiceManager {
         mSecurityConfig = null;
     }
 
-    private void notifyPrepareResult(boolean success) {
+    private void notifyPrepareResult(int subId, boolean success) {
         for (UTStateChangedListener listener : mIUTChangedListeners) {
-            listener.onPrepareFinished(success);
+            listener.onPrepareFinished(subId, success);
         }
     }
 
     private void updateServiceState() {
         if (isDisabled()) {
             for (UTStateChangedListener listener : mIUTChangedListeners) {
-                listener.onDisabled();
+                listener.onDisabled(mSubId);
             }
         }
     }
@@ -223,10 +225,10 @@ public class VoWifiUTManager extends ServiceManager {
 
             // After attach success, we need update the settings to native stack.
             if (updateSettings()) {
-                notifyPrepareResult(true);
+                notifyPrepareResult(mSubId, true);
             } else {
                 resetConfig();
-                notifyPrepareResult(false);
+                notifyPrepareResult(mSubId, false);
             }
         }
 
@@ -234,7 +236,7 @@ public class VoWifiUTManager extends ServiceManager {
         public void onFailed(int reason) {
             resetConfig();
             // Notify the prepare failed.
-            notifyPrepareResult(false);
+            notifyPrepareResult(mSubId, false);
         }
 
         @Override

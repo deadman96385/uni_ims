@@ -46,15 +46,21 @@ public class ImsUtImpl extends IImsUt.Stub {
 
     // Call forward service class
     private static final int SERVICE_CLASS_NO_DEFINED = 0;
+    // This value also defined in {@link ImsRIL}
     private static final int SERVICE_CLASS_VOICE = CommandsInterface.SERVICE_CLASS_VOICE;
-    // FIXME: This value defined in CallForwardEditPreference but not CommandsInterface.
-    private static final int SERVICE_CLASS_VIDEO = 2;
-    private static final int SERVICE_CLASS_ALL = SERVICE_CLASS_VOICE | SERVICE_CLASS_VIDEO;
+    // FIXME: 3GPP do not defined the service class for video call. So we'd like to defined
+    //        this value more than {@link ImsRIL#SERVICE_CLASS_MAX}.
+    private static final int CF_RESULT_SERVICE_CLASS_VIDEO = 1 << 8;
+    // FIXME: This value defined in CallForwardHelper#VIDEO_CALL_FORWARD as 2.
+    private static final int CF_QUERY_SERVICE_CLASS_VIDEO = 2;
+    private static final int SERVICE_CLASS_COMPLEX =
+            SERVICE_CLASS_VOICE | CF_RESULT_SERVICE_CLASS_VIDEO;
 
-    // If there isn't any CMD to disabled the UT after 1min.
-    private static final int DELAY_DISALBE_UT = 60 * 1000;
+    // If there isn't any CMD to disabled the UT after 15s.
+    private static final int DELAY_DISALBE_UT = 15 * 1000;
 
-    private int mPhoneId;
+    private int mPhoneId = -1;
+    private int mSubId = -1;
     private Context mContext;
     private boolean mUtEnabled;
 
@@ -206,20 +212,27 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
 
         @Override
-        public void onPrepareFinished(boolean success) {
+        public void onPrepareFinished(int subId, boolean success) {
+            if (subId != mSubId) return;
+
             // As prepare finished, we could process the action now.
             mUtEnabled = success;
             mCmdManager.processPendingAction();
         }
 
         @Override
-        public void onDisabled() {
+        public void onDisabled(int subId) {
+            if (subId != mSubId) return;
+
+            // As disabled, set mUtEnabled as false.
             mUtEnabled = false;
 
-            // As UT disabled, handle the CMD as failed.
-            ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
-                    ImsReasonInfo.CODE_UNSPECIFIED);
-            mCmdManager.onActionFailed(error);
+            if (mCmdManager.mCmds.size() > 0) {
+                // As UT disabled, handle the CMD as failed.
+                ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
+                        ImsReasonInfo.CODE_UNSPECIFIED);
+                mCmdManager.onAllActionFailed(error);
+            }
         }
     };
 
@@ -348,7 +361,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     public int updateCallBarring(int cbType, int enable, String[] barringList) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to update the call barring with the type: " + cbType + ", enabled: "
-                    + enable + ", barringList: " + Utilities.getString(barringList));
+                    + enable + ", barringList: " + Utilities.getStringFromArray(barringList));
         }
 
         // For update call barring action, it will handle if user input MMI code in dialer.
@@ -511,6 +524,14 @@ public class ImsUtImpl extends IImsUt.Stub {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Get the call forwarding option, call forward reason: " + reason
                     + ", service class: " + serviceClass + ", ruleSet: " + ruleSet);
+        }
+
+        // FIXME: The UI will start query for the video call forwarding with service class.
+        //        And it defined this value in CallForwardHelper#VIDEO_CALL_FORWARD as 2.
+        if ((serviceClass & CF_QUERY_SERVICE_CLASS_VIDEO) > 0) {
+            Log.d(TAG, "Query the call forwarding for video, convert the service class to 256.");
+            serviceClass =
+                    serviceClass - CF_QUERY_SERVICE_CLASS_VIDEO + CF_RESULT_SERVICE_CLASS_VIDEO;
         }
 
         UTAction action = new UTAction(true /* is extension action */, "getCallForwardingOption",
@@ -867,11 +888,11 @@ public class ImsUtImpl extends IImsUt.Stub {
                 Log.w(TAG, "The condition is abnormal, please check rule: " + rule.toString());
             }
             if (TextUtils.isEmpty(media)) {
-                info.mServiceClass = SERVICE_CLASS_ALL;
+                info.mServiceClass = SERVICE_CLASS_NO_DEFINED;
             } else if (JSONUtils.RULE_MEDIA_AUDIO.equals(media)) {
                 info.mServiceClass = SERVICE_CLASS_VOICE;
             } else if (JSONUtils.RULE_MEDIA_VIDEO.equals(media)) {
-                info.mServiceClass = SERVICE_CLASS_VIDEO;
+                info.mServiceClass = CF_RESULT_SERVICE_CLASS_VIDEO;
             } else {
                 Log.w(TAG, "The rule's media is: " + media + ", can not parse.");
             }
@@ -937,34 +958,45 @@ public class ImsUtImpl extends IImsUt.Stub {
     }
 
     private ImsCallForwardInfoEx[] findCallForwardInfoEx(ArrayList<ImsCallForwardInfo> infoList,
-            int condition, String number, int serviceClass, String ruleset) {
+            int condition, String number, int requiredServiceClass, String ruleset) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to find the call forward info ex for condition[" + condition
-                    + "] serviceClass[" + serviceClass + "]");
+                    + "] serviceClass[" + requiredServiceClass + "]");
         }
 
         ArrayList<ImsCallForwardInfoEx> infos = new ArrayList<ImsCallForwardInfoEx>();
-        ArrayList<String> items = getCFContainsItems(condition, serviceClass);
+        ArrayList<String> items = getCFContainsItems(condition, requiredServiceClass);
         for (ImsCallForwardInfo info : infoList) {
             if (isCFConditionMatched(condition, info.mCondition)
                     && (TextUtils.isEmpty(number) || number.equals(info.mNumber))
-                    && (isAllSerClass(serviceClass) || (serviceClass & info.mServiceClass) > 0)) {
-                if (isAllSerClass(serviceClass) && info.mServiceClass == SERVICE_CLASS_ALL) {
-                    // It means this info matched video and audio class. And we need create two
-                    // info as video service class and audio service class.
-                    items.remove(getCFItem(info.mCondition, SERVICE_CLASS_VOICE));
-                    infos.add(cloneCFInfoEx(info, SERVICE_CLASS_VOICE, ruleset));
-                    items.remove(getCFItem(info.mCondition, SERVICE_CLASS_VIDEO));
-                    infos.add(cloneCFInfoEx(info, SERVICE_CLASS_VIDEO, ruleset));
-                    Log.d(TAG, "Found CF info for condition[" + info.mCondition + "].");
-                } else {
-                    // It means this info only matched one service class.
-                    int newServiceClass =
-                            isAllSerClass(serviceClass) ? info.mServiceClass : serviceClass;
+                    && (info.mServiceClass == SERVICE_CLASS_NO_DEFINED
+                            || requiredServiceClass == SERVICE_CLASS_COMPLEX
+                            || (requiredServiceClass & info.mServiceClass) > 0)) {
+                if (info.mServiceClass == SERVICE_CLASS_NO_DEFINED) {
+                    if (requiredServiceClass == SERVICE_CLASS_COMPLEX) {
+                        // It means this info matched video and audio class. And we need create two
+                        // info as video service class and audio service class.
+                        items.remove(getCFItem(info.mCondition, SERVICE_CLASS_VOICE));
+                        infos.add(cloneCFInfoEx(info, SERVICE_CLASS_VOICE, ruleset));
+                        items.remove(getCFItem(info.mCondition, CF_RESULT_SERVICE_CLASS_VIDEO));
+                        infos.add(cloneCFInfoEx(info, CF_RESULT_SERVICE_CLASS_VIDEO, ruleset));
+                        Log.d(TAG, "Found CF info for condition[" + info.mCondition + "].");
+                    } else {
+                        int newServiceClass = requiredServiceClass;
+                        items.remove(getCFItem(info.mCondition, newServiceClass));
+                        infos.add(cloneCFInfoEx(info, newServiceClass, ruleset));
+                        Log.d(TAG, "Found CF info for condition[" + info.mCondition
+                                + "] serviceClass[" + newServiceClass + "].");
+                    }
+                } else if ((requiredServiceClass & info.mServiceClass) > 0) {
+                    int newServiceClass = info.mServiceClass;
                     items.remove(getCFItem(info.mCondition, newServiceClass));
                     infos.add(cloneCFInfoEx(info, newServiceClass, ruleset));
                     Log.d(TAG, "Found CF info for condition[" + info.mCondition
-                            + "] serviceClass[" + newServiceClass + "].");
+                            + "] serviceClass[" + info.mServiceClass + "].");
+                } else {
+                    Log.w(TAG, "Do not find CF info for condition[" + info.mCondition
+                            + "] serviceClass[" + info.mServiceClass + "].");
                 }
             }
         }
@@ -997,7 +1029,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         return res;
     }
 
-    private ArrayList<String> getCFContainsItems(int condition, int serviceClass) {
+    private ArrayList<String> getCFContainsItems(int condition, int requiredServiceClass) {
         // Build the condition list.
         ArrayList<Integer> conditionList = new ArrayList<Integer>();
         if (condition == ImsUtInterface.CDIV_CF_ALL
@@ -1016,11 +1048,11 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         // Build the service class list.
         ArrayList<Integer> serviceClassList = new ArrayList<Integer>();
-        if (isAllSerClass(serviceClass)) {
+        if (requiredServiceClass == SERVICE_CLASS_COMPLEX) {
             serviceClassList.add(Integer.valueOf(SERVICE_CLASS_VOICE));
-            serviceClassList.add(Integer.valueOf(SERVICE_CLASS_VIDEO));
+            serviceClassList.add(Integer.valueOf(CF_RESULT_SERVICE_CLASS_VIDEO));
         } else {
-            serviceClassList.add(serviceClass);
+            serviceClassList.add(requiredServiceClass);
         }
 
         // Build the keys.
@@ -1162,10 +1194,6 @@ public class ImsUtImpl extends IImsUt.Stub {
         return ImsUtInterface.INVALID;
     }
 
-    private boolean isAllSerClass(int serviceClass) {
-        return serviceClass != SERVICE_CLASS_VOICE && serviceClass != SERVICE_CLASS_VIDEO;
-    }
-
     private class CmdManager {
         private static final int ACTION_TYPE_QUERY = 0;
         private static final int ACTION_TYPE_UPDATE = 1;
@@ -1193,14 +1221,22 @@ public class ImsUtImpl extends IImsUt.Stub {
                 action._key = key;
             }
 
+            // Remove the disable UT message from handler.
+            mHandler.removeMessages(MSG_DISABLE_UT);
+
             if (mUtEnabled) {
-                mHandler.removeMessages(MSG_DISABLE_UT);
                 processPendingAction();
             } else {
+                if (mSubId < 0) {
+                    // Init the sub id.
+                    mSubId = Utilities.getSubId(mPhoneId);
+                    Log.d(TAG, "Bind this UtImpl[" + mPhoneId + "] for sub: " + mSubId);
+                }
+
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        mUtManager.prepare(Utilities.getPrimaryCardSubId(mContext));
+                        mUtManager.prepare(mSubId);
                     }
                 }).start();
             }
@@ -1259,6 +1295,13 @@ public class ImsUtImpl extends IImsUt.Stub {
 
             // After action failed, we need try to start the next pending action.
             processPendingAction();
+        }
+
+        public void onAllActionFailed(ImsReasonInfo error) {
+            for (Integer key : mCmds) {
+                UTAction specialAction = mUTActions.get(key);
+                onActionFailed(error, specialAction);
+            }
         }
 
         private void onActionFailed(ImsReasonInfo error, UTAction specialAction) {
@@ -1349,11 +1392,12 @@ public class ImsUtImpl extends IImsUt.Stub {
                         findCallForwardInfoEx(infoList,
                                 (Integer) action._params.get(0), // condition
                                 (String) action._params.get(1), // number
-                                SERVICE_CLASS_ALL,
+                                SERVICE_CLASS_COMPLEX, // service class for voice and video
                                 null));
                 if (infos != null) {
                     // Find the call forward info for this action.
-                    Log.d(TAG, "Success to query the call forward infos: " + infos);
+                    Log.d(TAG, "Success to query the call forward infos: "
+                            + Utilities.getStringFromArray(infos));
                     if (mListener != null) {
                         mListener.utConfigurationCallForwardQueried(
                                 ImsUtImpl.this, action._key, infos);
@@ -1374,7 +1418,8 @@ public class ImsUtImpl extends IImsUt.Stub {
                         (String) action._params.get(2));
                 if (infoExs != null && infoExs.length > 0) {
                     // Find the call forward info for this action.
-                    Log.d(TAG, "Success to query the call forward infoExs: " + infoExs);
+                    Log.d(TAG, "Success to query the call forward infoExs: "
+                            + Utilities.getStringFromArray(infoExs));
                     if (mListenerEx != null) {
                         mListenerEx.utConfigurationCallForwardQueried(
                                 ImsUtImpl.this, action._key, infoExs);
@@ -1569,7 +1614,15 @@ public class ImsUtImpl extends IImsUt.Stub {
     private class UtServiceCallback extends IVoWifiUTCallback.Stub {
         @Override
         public void onEvent(String json) {
-            if (Utilities.DEBUG) Log.i(TAG, "Get the vowifi ser event callback.");
+            if (Utilities.DEBUG) {
+                Log.i(TAG, "Get the vowifi ser event callback in UtImpl[" + mPhoneId + "].");
+            }
+
+            if (!mUtEnabled) {
+                Log.d(TAG, "This UtImpl[" + mPhoneId + "] is disabled, needn't handle.");
+                return;
+            }
+
             if (TextUtils.isEmpty(json)) {
                 Log.e(TAG, "Can not handle the ser callback as the json is null.");
                 return;
