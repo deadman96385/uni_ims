@@ -427,21 +427,26 @@ public class ImsService extends Service {
                                                         mFeatureSwitchRequest.mRequestId,
                                                         ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOWIFI);
                                     }
-                                    if (mWifiService != null
-                                            && !mPendingVowifiHandoverVowifiSuccess) {
+                                    /* UNISOC: modify for bug978846 @{ */
+                                    if (mWifiService != null && !mWifiRegistered) {
                                         mWifiService.register();
                                         mIsLoggingIn = true;  // SPRD:Add for bug950573
+                                        mFeatureSwitchRequest = null;
                                     }
+                                    /*@}*/
                                     mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;  // UNISOC: Add for bug950573
                                     mPendingAttachVowifiSuccess = false;
+                                    if (mWifiRegistered) {
+                                        mPendingVowifiHandoverVowifiSuccess = true;  // UNISOC: add for bug978846
+                                    }
                                     mWifiService
                                             .updateCallRatState(CallRatState.CALL_NONE);
                                 }
                                 Log.i(TAG,
                                         "EVENT_WIFI_ATTACH_SUCCESSED ->mFeatureSwitchRequest.mEventCode:"
-                                                + mFeatureSwitchRequest.mEventCode
+                                                + ACTION_START_HANDOVER
                                                 + " currentImsFeature:"
-                                                + getImsFeature(mFeatureSwitchRequest.mServiceId)    // UNISOC: Modify for bug950573
+                                                + getImsFeature(mVowifiAttachedServiceId)    // UNISOC: Modify for bug950573
                                                 + " mIsCalling:" + mIsCalling
                                                 + " mIsVowifiCall:" + mIsVowifiCall
                                                 + " mIsVolteCall:" + mIsVolteCall
@@ -549,9 +554,6 @@ public class ImsService extends Service {
                                             if (mInCallHandoverFeature != mFeatureSwitchRequest.mTargetType) {
                                                 if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
                                                     mPendingAttachVowifiSuccess = true;
-                                                    if (mIsVowifiCall) {
-                                                        mPendingVowifiHandoverVowifiSuccess = true;
-                                                    }
                                                 } else if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) {
                                                     mPendingActivePdnSuccess = true;
                                                 }
@@ -801,13 +803,13 @@ public class ImsService extends Service {
                             mIsPendingRegisterVolte = false;// SPRD: add for
                                                             // bug723080
                         }
-                        if (mPendingAttachVowifiSuccess) {
+                        if (mPendingVowifiHandoverVowifiSuccess) { // UNISOC: modify for bug978846
                             Log.i(TAG,
-                                    "ACTION_NOTIFY_VOWIFI_UNAVAILABLE->mPendingAttachVowifiSuccess is true->mCallEndType:"
+                                    "ACTION_NOTIFY_VOWIFI_UNAVAILABLE->mPendingVowifiHandoverVowifiSuccess is true->mCallEndType:"
                                             + mCallEndType
                                             + " mIsCalling:"
                                             + mIsCalling);
-                            mPendingAttachVowifiSuccess = false;
+                            mPendingVowifiHandoverVowifiSuccess = false;
                             if (mCallEndType != -1 && !mIsCalling) {
                                 Log.i(TAG,
                                         "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> mCallEndType:"
@@ -938,13 +940,18 @@ public class ImsService extends Service {
                             }
                             mAttachVowifiSuccess = false;
                             mFeatureSwitchRequest = null;
-                            if (mPendingAttachVowifiSuccess) {
+                            if (mPendingAttachVowifiSuccess || mPendingVowifiHandoverVowifiSuccess) { // UNISOC: modify for bug978846
                                 mPendingAttachVowifiSuccess = false;
+                                mPendingVowifiHandoverVowifiSuccess = false;
                                 Log.i(TAG,
                                         "ACTION_CANCEL_CURRENT_REQUEST-> mPendingAttachVowifiSuccess is true!");
                                 if (mCallEndType != -1 && !mIsCalling) {
                                     Log.i(TAG,
-                                            "ACTION_CANCEL_CURRENT_REQUEST-> mCallEndType:"
+                                            "ACTION_CANCEL_CURRENT_REQUEST-> mPendingAttachVowifiSuccess:"
+                                                    + mPendingAttachVowifiSuccess
+                                                    + " mPendingVowifiHandoverVowifiSuccess:"
+                                                    + mPendingVowifiHandoverVowifiSuccess
+                                                    + " mCallEndType:"
                                                     + mCallEndType);
                                     notifyCpCallEnd();
                                 }
@@ -1061,7 +1068,7 @@ public class ImsService extends Service {
                                         Log.i(TAG,
                                                 "EVENT_UPDATE_DATA_ROUTER_FINISHED->notifyDataRouter");
                                         imsService.notifyDataRouter();
-                                    } else {
+                                    } else if (!mPendingVolteHandoverVolteSuccess) { //UNISOC: modify for bug978846
                                         mPendingReregister = true;
                                     }
                                     Log.i(TAG,
@@ -1163,7 +1170,35 @@ public class ImsService extends Service {
                                     mPendingVowifiHandoverVowifiSuccess = false;
                                 }
                             }
+                            /* UNISOC: add for bug978846 @{ */
+                        } else if (mPendingVolteHandoverVolteSuccess) {
+                            Log.i(TAG,
+                                    "EVENT_UPDATE_DATA_ROUTER_FINISHED->mPendingVolteHandoverVolteSuccess is true");
+                            if((mFeatureSwitchRequest == null) && mVolteRegistered && !mIsCalling) {
+                                if (mIsS2bStopped) {
+                                    Log.i(TAG,
+                                            "EVENT_UPDATE_DATA_ROUTER_FINISHED->notifyDataRouter");
+
+                                    int vowifiServiceId = getVoWifiServiceId();
+                                    if(vowifiServiceId == IMS_INVALID_SERVICE_ID)
+                                    {
+                                        vowifiServiceId = ImsRegister.getPrimaryCard(mPhoneCount) + 1;
+                                        Log.i(TAG,"EVENT_UPDATE_DATA_ROUTER_FINISHED, use main sim serviceId: " + vowifiServiceId);
+                                    }
+                                    ImsServiceImpl imsService = mImsServiceImplMap.get(new Integer(vowifiServiceId));
+                                    if (imsService != null)
+                                        imsService.notifyDataRouter();
+                                }
+
+                                Log.i(TAG,
+                                        "EVENT_UPDATE_DATA_ROUTER_FINISHED->mIsS2bStopped:"
+                                                + mIsS2bStopped
+                                                + " mPendingReregister"
+                                                + mPendingReregister);
+                            }
+                            mPendingVolteHandoverVolteSuccess = false;
                         }
+                        /*@}*/
                         break;
                     case EVENT_NOTIFY_CP_VOWIFI_ATTACH_SUCCESSED:
                         Log.i(TAG,
@@ -2563,9 +2598,6 @@ public class ImsService extends Service {
                                     mPendingAttachVowifiSuccess = true;
                                 } else if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) {
                                     mPendingActivePdnSuccess = true;
-                                    if (mIsVolteCall) {
-                                        mPendingVolteHandoverVolteSuccess = true;
-                                    }
                                 }
                             }
                             if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
@@ -2816,24 +2848,17 @@ public class ImsService extends Service {
         Log.i(TAG, "onReceiveHandoverEvent->isCalling:" + isCalling
                 + " requestId:" + requestId + " targetType:" + targetType
                 + " currentImsFeature:" + currentImsFeature
-                + " mPendingActivePdnSuccess:" + mPendingActivePdnSuccess
-                + " mPendingAttachVowifiSuccess:" + mPendingAttachVowifiSuccess);
-        if (!mIsCalling && mPendingActivePdnSuccess) {
-            mPendingActivePdnSuccess = false;
-            if (mCallEndType != -1) {
-                Log.i(TAG, "onReceiveHandoverEvent-> mCallEndType:"
-                        + mCallEndType);
-                notifyCpCallEnd();
-            }
+                + " mPendingVolteHandoverVolteSuccess:" + mPendingVolteHandoverVolteSuccess
+                + " mPendingVowifiHandoverVowifiSuccess:" + mPendingVowifiHandoverVowifiSuccess);
+        if (!mIsCalling && (mCallEndType != -1)) { // UNISOC: modify for bug978846
+            Log.i(TAG, "onReceiveHandoverEvent-> mCallEndType:"
+                    + mCallEndType);
+            notifyCpCallEnd();
+
+            mPendingVolteHandoverVolteSuccess   = false;
+            mPendingVowifiHandoverVowifiSuccess = false;
         }
-        if (!mIsCalling && mPendingAttachVowifiSuccess) {
-            mPendingAttachVowifiSuccess = false;
-            if (mCallEndType != -1) {
-                Log.i(TAG, "onReceiveHandoverEvent-> mCallEndType:"
-                        + mCallEndType);
-                notifyCpCallEnd();
-            }
-        }
+
         mFeatureSwitchRequest = new ImsServiceRequest(
                 requestId,
                 isCalling ? ACTION_START_HANDOVER : ACTION_SWITCH_IMS_FEATURE /* eventCode */,
@@ -2907,7 +2932,9 @@ public class ImsService extends Service {
                 if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) {
                     if (state == ImsHandoverResult.IMS_HANDOVER_PDN_BUILD_FAIL
                             || state == ImsHandoverResult.IMS_HANDOVER_REGISTER_FAIL) {
-                        if (mImsServiceListenerEx != null) { //UNISOC: modify by bug968960
+
+                        /* UNISOC: delete for bug978846 ,handle by func: onImsPdnStatusChange()@{ */
+                        /*if (mImsServiceListenerEx != null) { //UNISOC: modify by bug968960
                             mImsServiceListenerEx
                                     .operationFailed(
                                             mFeatureSwitchRequest.mRequestId,
@@ -2921,7 +2948,10 @@ public class ImsService extends Service {
                                     .updateCallRatState(CallRatState.CALL_NONE);
                             Log.i(TAG,
                                     "onImsHandoverStateChange->ACTION_START_HANDOVER fail,mPendingActivePdnSuccess is true!");
-                        }
+                        }*/
+                        /*@}*/
+                        Log.i(TAG,
+                                "onImsHandoverStateChange->ACTION_START_HANDOVER fail!"); //UNISOC: Add for bug978846
                     } else if (state == ImsHandoverResult.IMS_HANDOVER_SRVCC_FAILED) {
                         if (mImsServiceListenerEx != null) { //UNISOC: modify by bug968960
                             mImsServiceListenerEx.onSrvccFaild();
@@ -3130,6 +3160,9 @@ public class ImsService extends Service {
                         }
                         mWifiService.deattach(true);
                         mPendingActivePdnSuccess = false;
+                        if(mVolteRegistered) {
+                            mPendingVolteHandoverVolteSuccess = true; // UNISOC: add for bug978846
+                        }
                         mWifiService
                                 .updateCallRatState(CallRatState.CALL_NONE);
                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;    // UNISOC: Add for bug950573
