@@ -290,12 +290,7 @@ public class ImsServiceImpl extends MmTelFeature {
             }
             /*@}*/
             /*@}*/
-
-            if (isVoWifiEnabled()) {
-                notifyCapabilitiesStatusChanged(mDeviceVowifiCapabilities);
-            } else {
-                notifyCapabilitiesStatusChanged(mDeviceVolteCapabilities);
-            }
+            updateImsFeatureForAllService();//add for unisoc979468
         }
     }
 
