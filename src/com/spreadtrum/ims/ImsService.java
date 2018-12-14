@@ -2459,9 +2459,9 @@ class MyVoWifiCallback implements VoWifiCallback {
                 && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
             imsService.setSrvccState(-1);
         }
-        // SPRD add for bug 826630 and bug840308
+        // SPRD add for bug 826630 and bug840308 982185
         iLog("updateInCallState->mWifiRegistered:"+mWifiRegistered+" mVolteRegistered:"+mVolteRegistered +" mCurrentImsFeature:"+mCurrentImsFeature);
-        if (!isInCall && !mWifiRegistered && !mVolteRegistered && (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN)) {
+        if (!isInCall) {
             if (mIsVowifiCall) {
                 mIsVowifiCall = false;
             } else if (mIsVolteCall) {
