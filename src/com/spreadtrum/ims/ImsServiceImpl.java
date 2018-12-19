@@ -15,9 +15,12 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
+import android.os.PersistableBundle;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.AsyncResult;
+import android.telephony.CarrierConfigManager;
+import android.telephony.CarrierConfigManagerEx;
 import android.telephony.ServiceState;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
@@ -40,6 +43,8 @@ import com.android.ims.ImsManager;
 import com.android.ims.ImsServiceClass;
 import com.android.ims.ImsConfig;
 import android.telephony.ims.ImsReasonInfo;
+
+import com.android.sprd.telephony.RadioInteractor;
 import com.spreadtrum.ims.ut.ImsUtImpl;
 import com.spreadtrum.ims.ut.ImsUtProxy;
 
@@ -160,6 +165,7 @@ public class ImsServiceImpl extends MmTelFeature {
     private int mSrvccCapbility = -1;
     // SPRD: 730973
     private boolean mVolteRegisterStateOld = false;
+    private RadioInteractor mRadioInteractor;
 
     /**
      * AndroidP start@{:
@@ -423,6 +429,8 @@ public class ImsServiceImpl extends MmTelFeature {
                 Telephony.Carriers.CONTENT_URI, true, mApnChangeObserver);
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);//SPRD:add for bug594553
         mCi.getImsRegAddress(mHandler.obtainMessage(EVENT_IMS_GET_IMS_REG_ADDRESS));//SPRD: add for bug739660
+
+        mRadioInteractor = new RadioInteractor(context);//UNISOC:add for bug982110
     }
 
     /**
@@ -511,6 +519,7 @@ public class ImsServiceImpl extends MmTelFeature {
                     log( "setTelephonyProperty isDualVolte:"+ImsManagerEx.isDualVoLTEActive());
                     TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state",
                             mImsServiceState.mImsRegistered ? "1" :"0");
+                    setPreferredNetworkRAT(isImsRegistered());
                     notifyRegisterStateChange();
                     log("EVENT_IMS_STATE_DONE->mServiceState:" + mImsServiceState.mImsRegistered);
                     break;
@@ -1669,4 +1678,35 @@ public class ImsServiceImpl extends MmTelFeature {
         }
     }
     /*@}*/
+
+    /*UNISOC:add for bug982110
+     *Volte register: ps
+     *2/3/4G :cs
+     *  @} */
+    public void setPreferredNetworkRAT(boolean volteRegister) {
+        if(volteRegister == getVolteRegisterStateOld()){
+            return;
+        }
+        CarrierConfigManager carrierConfig = (CarrierConfigManager) mContext.getSystemService(
+                Context.CARRIER_CONFIG_SERVICE);
+        int networkPref = 0;
+        boolean setRat = false;
+        if (carrierConfig != null) {
+            PersistableBundle config = carrierConfig.getConfigForPhoneId(mPhone.getPhoneId());
+            if (config != null) {
+
+                setRat = config.getBoolean(CarrierConfigManagerEx.KEY_NETWORK_RAT_ON_SWITCH_IMS);
+                if (setRat) {
+                    networkPref = config.getInt(CarrierConfigManagerEx.KEY_NETWORK_RAT_PREFER_INT);
+                }
+            }
+        }
+        Log.d(TAG, "setPreferredNetworkRAT: networkPref = " + networkPref + " setRat = " + setRat);
+        if (setRat) {
+            if (volteRegister) {
+                networkPref = 0;
+            }
+            mRadioInteractor.setNetworkSpecialRATCap(networkPref, mPhone.getPhoneId());
+        }
+    }/*@}*/
 }
