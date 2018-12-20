@@ -2600,7 +2600,9 @@ public class ImsService extends Service {
                                     mPendingActivePdnSuccess = true;
                                 }
                             }
-                            if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
+                            if ((mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI)
+                                    || ((mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) // UNISOC: modify for bug983182
+                                    && (mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN))){
                                 if (mIsVolteCall && mIsPendingRegisterVowifi) {
                                     mWifiService.register();
                                     mIsLoggingIn = true;
@@ -3072,13 +3074,28 @@ public class ImsService extends Service {
                     Log.w(TAG,
                             "onImsPdnStatusChange->mImsServiceListenerEx is null!");
                 }
-                if (!mIsCalling
-                        && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER) {
-                    mPendingActivePdnSuccess = false;
-                    mWifiService
-                            .updateCallRatState(CallRatState.CALL_NONE);
+                /* UNISOC: modify for bug983182 @{ */
+                if(mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER) {
+                    Log.i(TAG, "onImsPdnStatusChange -> mIsCalling: " + mIsCalling + "mIsPendingRegisterVolte:" + mIsPendingRegisterVolte + "mIsVolteCall: " + mIsVolteCall);
+                    if (!mIsCalling) {
+                        mPendingActivePdnSuccess = false;
+                        mWifiService
+                                .updateCallRatState(CallRatState.CALL_NONE);
+
+                        if (mAttachVowifiSuccess && !mIsPendingRegisterVolte & !mWifiRegistered) {
+                            mWifiService.register();
+                            mIsLoggingIn = true;
+                        }
+                        mFeatureSwitchRequest = null;
+                    } else if (mIsVolteCall && mAttachVowifiSuccess && !mIsPendingRegisterVolte) {
+                        mIsPendingRegisterVowifi = true;
+                    } else {
+                        mFeatureSwitchRequest = null;
+                    }
+                } else {
+                    mFeatureSwitchRequest = null;
                 }
-                mFeatureSwitchRequest = null;
+                /*@}*/
                 mIsPendingRegisterVolte = false;
             } else if (state == ImsPDNStatus.IMS_PDN_READY) {
                 ImsServiceImpl service = mImsServiceImplMap.get(Integer
