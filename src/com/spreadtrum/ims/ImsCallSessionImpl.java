@@ -746,12 +746,17 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 case ACTION_COMPLETE_GET_CALL_FAIL_CAUSE:
                    //SPRD: add for bug751898
                    LastCallFailCause failCause = null;
+                   String vendorCause = null;
                    if(mIImsCallSessionListener != null){
                         //SPRD: add for bug751898
                         if(ar != null && (ar.exception != null || ar.result == null)) {
                             Log.w(TAG, "handleMessage->ACTION_COMPLETE_GET_CALL_FAIL_CAUSE error!");
                         } else {
                             failCause = (LastCallFailCause) ar.result;
+                            //UNISOC: add for bug993551
+                            if(failCause != null){
+                                vendorCause = failCause.vendorCause;
+                            }
                         }
 
                         /* SPRD: add for bug713220 @{ */
@@ -768,7 +773,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                                 }
                                 Log.w(TAG, "callSessionTerminated  mDisconnCause=" + mDisconnCause);
                                 mIImsCallSessionListener.callSessionTerminated(
-                                        new ImsReasonInfo(mDisconnCause, 0));
+                                        new ImsReasonInfo(mDisconnCause, 0, vendorCause));
                                 return;
                             }
                         } catch (RemoteException e) {
@@ -776,7 +781,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         }
                         /* @} */
 
-                        ImsReasonInfo reasonInfo = new ImsReasonInfo();
+                        //UNISOC: add for bug993551
+                        ImsReasonInfo reasonInfo = new ImsReasonInfo(0, 0, vendorCause);
                         //SPRD: add for bug751898
                         if(failCause != null){
                             mDisconnCause = failCause.causeCode;
