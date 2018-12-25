@@ -170,12 +170,15 @@ public class ImsServiceImpl extends MmTelFeature {
     //add for unisoc 911545
     private MmTelCapabilities mDeviceVolteCapabilities = new MmTelCapabilities();
     private MmTelCapabilities mDeviceVowifiCapabilities = new MmTelCapabilities();
-    private final Object mCapabilitiesLock = new Object(); // UNISOC: Add for bug978339
     private int mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;  // UNISOC: Add for bug950573
     /* UNISOC: add for bug968317 @{ */
     private int VoLTECallAvailSync = VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_IDLE;
     private int currentVoLTESetting= IMS_INVALID_VOLTE_SETTING;
     private int pendingVoLTESetting= IMS_INVALID_VOLTE_SETTING;
+    /*@}*/
+    /* UNISOC: add for bug988585 @{ */
+    private boolean mDeviceCapabilitiesFirstChange = true;
+    private boolean mVideoCapabilityEnabled        = false;
     /*@}*/
 
     public IImsRegistration getRegistration(){
@@ -249,7 +252,8 @@ public class ImsServiceImpl extends MmTelFeature {
         List<CapabilityChangeRequest.CapabilityPair> enableCap = request.getCapabilitiesToEnable();
         List<CapabilityChangeRequest.CapabilityPair> disableCap = request.getCapabilitiesToDisable();
         log("changeEnabledCapabilities->enableCap:" + enableCap + "/n disableCap:"+disableCap);
-        synchronized (mCapabilitiesLock) {   // UNISOC: Add for bug978339
+        boolean isVideoCapabilityChanged   = false; // UNISOC: Add for bug988585
+        synchronized (mDeviceVolteCapabilities) {   // UNISOC: Add for bug978339,bug988585
             for (CapabilityChangeRequest.CapabilityPair pair : enableCap) {
                 if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_LTE) {
                     //add for unisoc 911545
@@ -290,8 +294,25 @@ public class ImsServiceImpl extends MmTelFeature {
             }
             /*@}*/
             /*@}*/
-            updateImsFeatureForAllService();//add for unisoc979468
+
+            /* UNISOC: add for bug988585 @{ */
+            boolean newVideoCapabilityEnabled = mDeviceVolteCapabilities.isCapable(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
+            if(mVideoCapabilityEnabled != newVideoCapabilityEnabled)
+            {
+                isVideoCapabilityChanged = true;
+                mVideoCapabilityEnabled = newVideoCapabilityEnabled;
+                log("changeEnabledCapabilities->mVideoCapabilityEnabled:" + mVideoCapabilityEnabled);
+            }
+            /*@}*/
         }
+
+        /* UNISOC: modify for bug988585 @{ */
+        if(mDeviceCapabilitiesFirstChange || isVideoCapabilityChanged)
+        {
+            mImsService.updateImsFeature(mServiceId);
+            mDeviceCapabilitiesFirstChange = false;
+        }
+        /*@}*/
     }
 
 
@@ -1364,7 +1385,7 @@ public class ImsServiceImpl extends MmTelFeature {
     public void updateImsFeatures(boolean volteEnable, boolean wifiEnable){
         log("updateImsFeatures->volteEnable:" + volteEnable + " wifiEnable:" + wifiEnable+" id:"+mServiceId);
         ImsManager imsManager = ImsManager.getInstance(mContext,mPhone.getPhoneId());
-        synchronized (mCapabilitiesLock) {   // UNISOC: Add for bug978339
+        synchronized (mVolteCapabilities) {   // UNISOC: Add for bug978339, bug988585
             try {
                 if (volteEnable) {
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
