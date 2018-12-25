@@ -1210,7 +1210,7 @@ public class ImsService extends Service {
                         Impl.notifyImsHandoverStatus(ImsHandoverResult.IMS_HANDOVER_ATTACH_SUCCESS);
                         break;
                     case ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE:
-                        updateImsFeatureForAllService();
+                        notifyImsRegisterState();  // UNISOC: Modify for bug988585
                         break;
                     default:
                         break;
