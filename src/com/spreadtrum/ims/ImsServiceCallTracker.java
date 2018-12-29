@@ -826,6 +826,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
 
     public void removeConferenceMemberSession(ImsCallSessionImpl conferenceMember){
         Log.d(TAG,"removeConferenceMemberSession -> conferenceMember="+conferenceMember);
+        //Uniso: change for Bug 989001
+        conferenceMember.notifySessionDisconnected();
         removeDisconncetedSessionFromList(conferenceMember);
     }
     /* @} */
