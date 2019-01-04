@@ -453,6 +453,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     private void attachInternal(boolean isHandover) {
+        Log.d(mTag, "Attach on the version: " + Utilities.Version.getVersionInfo());
         // Before start attach process, need get the SIM account info.
         // We will always use the primary card to attach and register now.
         mPhoneId = Utilities.getPrimaryCard(mContext);
