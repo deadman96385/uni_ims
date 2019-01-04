@@ -1067,9 +1067,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     @Override
     public void sendDtmf(char c, Message result) throws RemoteException {
         // TODO: need change
-        Log.i(TAG, "sendDtmf" + c);
+        Log.i(TAG, "sendDtmf: " + c);
         if (mICall != null) {
-            mICall.sessDtmf(mCallId, getDtmfType(c));
+            if (isConferenceCall()) {
+                mICall.confDtmf(mCallId, getDtmfType(c));
+            } else {
+                mICall.sessDtmf(mCallId, getDtmfType(c));
+            }
         }
 
         // Send event finished, send the result to target.
@@ -1089,9 +1093,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     @Override
     public void startDtmf(char c) throws RemoteException {
         // TODO: need change
-        Log.i(TAG, "startDtmf" + c);
+        Log.i(TAG, "startDtmf: " + c);
         if (mICall != null) {
-            mICall.sessDtmf(mCallId, getDtmfType(c));
+            if (isConferenceCall()) {
+                mICall.confDtmf(mCallId, getDtmfType(c));
+            } else {
+                mICall.sessDtmf(mCallId, getDtmfType(c));
+            }
         }
     }
 

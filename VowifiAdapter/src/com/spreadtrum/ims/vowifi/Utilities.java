@@ -11,7 +11,7 @@ import android.telecom.VideoProfile;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
-//import android.telephony.TelephonyManagerEx;
+import android.telephony.TelephonyManagerEx;
 import android.telephony.ims.ImsCallProfile;
 import android.text.TextUtils;
 import android.util.Log;
@@ -51,7 +51,7 @@ public class Utilities {
     public static final String SERVICE_ACTION_UT = IVoWifiUT.class.getCanonicalName();
 
     // Used to get the primary card id.
-    private static final int DEFAULT_PHONE_ID   = 0;
+    private static final int DEFAULT_PHONE_ID = 0;
 
     // Used to enable or disable the secondary service for sos register.
     private static final String PROP_KEY_ENABLE_SEC_SERVICE = "persist.vowifi.sec.ser.enabled";
@@ -1062,7 +1062,8 @@ public class Utilities {
         }
 
         public boolean isEnabled() {
-            return /*TODO: TelephonyManagerEx.from(mContext).getIccFdnEnabled(mSubId)*/false;
+            TelephonyManagerEx tmEx = TelephonyManagerEx.from(mContext);
+            return tmEx.getIccFdnEnabled(mSubId);
         }
 
         public boolean isAccept(String callee) {
@@ -1365,4 +1366,15 @@ public class Utilities {
         public static final String EVENT_SMS_RECEIVED = "sms_received";
     }
 
+    public static class Version {
+        // AIDL - please update the first version number.
+        // Native - please update the second version number.
+        // Others - please update the third version number.
+        public static final String NUMBER = "1.0.0";
+        public static final String DETAIL = "Init";
+
+        public static String getVersionInfo() {
+            return NUMBER + "[" + DETAIL + "]";
+        }
+    }
 }

@@ -220,7 +220,7 @@ public class VoWifiRegisterManager extends ServiceManager {
                     }
 
                     int res = mIRegister.cliLogin(
-                            forSos, isIPv4, localIP, pcscfIP, dnsSerIP, type, info, isRelogin);
+                            forSos, isIPv4, localIP, pcscfIP, dnsSerIP, type, info, -1, isRelogin);
                     if (res == Result.FAIL) {
                         Log.e(TAG, "Login to the ims service failed, Please check!");
                         updateRegisterState(RegisterState.STATE_IDLE);
