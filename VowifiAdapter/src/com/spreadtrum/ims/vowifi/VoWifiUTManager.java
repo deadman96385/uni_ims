@@ -179,6 +179,7 @@ public class VoWifiUTManager extends ServiceManager {
     private void resetConfig() {
         mInAttaching = false;
         mSessionId = -1;
+        mSubId = -1;
         mSecurityConfig = null;
     }
 
