@@ -33,7 +33,9 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -824,11 +826,11 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
     }
 
-    private void handleQueryCallForwardOK(ArrayList<ImsCallForwardInfo> infoList)
+    private void handleQueryCallForwardOK(HashMap<Integer, ImsCallForwardInfo> infoMap)
             throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Query call forward finished, the result is OK.");
 
-        mCmdManager.onQueryCallForwardFinished(infoList);
+        mCmdManager.onQueryCallForwardFinished(infoMap);
     }
 
     private void handleQueryCallBarringOK(ArrayList<CallBarringInfo> infoList)
@@ -856,7 +858,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         mCmdManager.onActionFailed(error);
     }
 
-    private ArrayList<ImsCallForwardInfo> parseCallForwardInfos(String jsonString)
+    private HashMap<Integer, ImsCallForwardInfo> parseCallForwardInfos(String jsonString)
             throws JSONException {
         if (Utilities.DEBUG) Log.i(TAG, "Parse the CF infos from the json: " + jsonString);
         if (TextUtils.isEmpty(jsonString)) {
@@ -864,7 +866,7 @@ public class ImsUtImpl extends IImsUt.Stub {
             return null;
         }
 
-        ArrayList<ImsCallForwardInfo> infoList = new ArrayList<ImsCallForwardInfo>();
+        HashMap<Integer, ImsCallForwardInfo> infos = new HashMap<Integer, ImsCallForwardInfo>();
 
         JSONObject jObject = new JSONObject(jsonString);
         int timeSeconds = jObject.optInt(JSONUtils.KEY_UT_CF_TIME_SECONDS, 0);
@@ -896,10 +898,10 @@ public class ImsUtImpl extends IImsUt.Stub {
             } else {
                 Log.w(TAG, "The rule's media is: " + media + ", can not parse.");
             }
-            infoList.add(info);
+            infos.put(Integer.valueOf(info.mCondition), info);
         }
 
-        return infoList;
+        return infos;
     }
 
     private ArrayList<CallBarringInfo> parseCallBarringInfos(String jsonString)
@@ -957,8 +959,9 @@ public class ImsUtImpl extends IImsUt.Stub {
         return infos;
     }
 
-    private ImsCallForwardInfoEx[] findCallForwardInfoEx(ArrayList<ImsCallForwardInfo> infoList,
-            int condition, String number, int requiredServiceClass, String ruleset) {
+    private ImsCallForwardInfoEx[] findCallForwardInfoEx(
+            HashMap<Integer, ImsCallForwardInfo> infoMap, int condition, String number,
+            int requiredServiceClass, String ruleset) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to find the call forward info ex for condition[" + condition
                     + "] serviceClass[" + requiredServiceClass + "]");
@@ -966,7 +969,9 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         ArrayList<ImsCallForwardInfoEx> infos = new ArrayList<ImsCallForwardInfoEx>();
         ArrayList<String> items = getCFContainsItems(condition, requiredServiceClass);
-        for (ImsCallForwardInfo info : infoList) {
+        Iterator<Entry<Integer, ImsCallForwardInfo>> it = infoMap.entrySet().iterator();
+        while(it.hasNext()) {
+            ImsCallForwardInfo info = it.next().getValue();
             if (isCFConditionMatched(condition, info.mCondition)
                     && (TextUtils.isEmpty(number) || number.equals(info.mNumber))
                     && (info.mServiceClass == SERVICE_CLASS_NO_DEFINED
@@ -1355,7 +1360,7 @@ public class ImsUtImpl extends IImsUt.Stub {
             }
         }
 
-        public void onQueryCallForwardFinished(ArrayList<ImsCallForwardInfo> callForwardInfos)
+        public void onQueryCallForwardFinished(HashMap<Integer, ImsCallForwardInfo> infoMap)
                 throws RemoteException {
             synchronized (mCmds) {
                 if (!mHandleCmd) {
@@ -1373,7 +1378,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                 Log.d(TAG, "Query CF finished, action._action is: " + action._action);
 
                 if (action._needFeedback) {
-                    feedbackCFResult(action, callForwardInfos);
+                    feedbackCFResult(action, infoMap);
                 }
 
                 mUTActions.remove(key);
@@ -1385,11 +1390,11 @@ public class ImsUtImpl extends IImsUt.Stub {
             processPendingAction();
         }
 
-        private void feedbackCFResult(UTAction action, ArrayList<ImsCallForwardInfo> infoList)
+        private void feedbackCFResult(UTAction action, HashMap<Integer, ImsCallForwardInfo> infoMap)
                 throws RemoteException {
             if (action._action == MSG_ACTION_QUERY_CALL_FORWARD) {
                 ImsCallForwardInfo[] infos = getFromEx(
-                        findCallForwardInfoEx(infoList,
+                        findCallForwardInfoEx(infoMap,
                                 (Integer) action._params.get(0), // condition
                                 (String) action._params.get(1), // number
                                 SERVICE_CLASS_COMPLEX, // service class for voice and video
@@ -1411,7 +1416,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     }
                 }
             } else if (action._action == MSG_ACTION_QUERY_CALL_FORWARDING_OPTION) {
-                ImsCallForwardInfoEx[] infoExs = findCallForwardInfoEx(infoList,
+                ImsCallForwardInfoEx[] infoExs = findCallForwardInfoEx(infoMap,
                         getConditionFromCFReason((Integer) action._params.get(0)),
                         null,
                         (Integer) action._params.get(1),
