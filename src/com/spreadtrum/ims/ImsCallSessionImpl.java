@@ -994,6 +994,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         mVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
+        //add for unisoc 973687
+        mImsServiceCallTracker.removeMessageAfterDial();
     }
 
     /**

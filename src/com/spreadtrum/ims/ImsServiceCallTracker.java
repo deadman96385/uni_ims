@@ -276,6 +276,12 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
 
         return mHandler.obtainMessage(what);
     }
+
+
+    //add for unisoc 973687
+    public void removeMessageAfterDial() {
+        mHandler.removeMessages(EVENT_POLL_CALLS_RESULT);;
+    }
     /* SPRD: add for bug525777 @{ */
     public void
     pollCallsAfterOperationComplete() {
