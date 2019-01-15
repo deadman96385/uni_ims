@@ -6,7 +6,6 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
-import android.telephony.PhoneNumberUtils;
 import android.telephony.SmsManager;
 import android.telephony.SmsManagerEx;
 import android.telephony.ims.stub.ImsSmsImplBase;
@@ -111,8 +110,8 @@ public class VoWifiSmsManager extends ServiceManager {
     private void handleEvent(String json) {
         // As the VOWIFI enabled on the primary card. So handle the events on the primary card.
         ImsSmsImpl smsImpl = mSmsImpls.get(Integer.valueOf(Utilities.getPrimaryCard(mContext)));
-        if (smsImpl == null) {
-            Log.e(TAG, "Can not handle the sms event now! Implemention is null.");
+        if (smsImpl == null || !smsImpl.mReady) {
+            Log.e(TAG, "Can not handle the sms event now! SmsImpl is null or do not ready.");
             return;
         }
 
@@ -244,21 +243,27 @@ public class VoWifiSmsManager extends ServiceManager {
                         + "], result[" + result + "]");
             }
 
-            if (mISms == null) {
-                // TODO: handle as send failed.
+            if (!mReady || mISms == null) {
+                Log.e(TAG, "Failed to acknowledge sms as mReady: " + mReady + ", mISms: " + mISms);
+                onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_FALLBACK,
+                        SmsManager.RESULT_ERROR_NO_SERVICE);
+                mSmsList.remove(new Sms(token));
+                return;
             }
 
             try {
                 int id = mISms.acknowledgeSms(token, messageRef, getCauseFromResult(result));
                 if (id != Result.INVALID_ID) {
                     mSmsList.remove(new Sms(token));
-                } else {
-                    // TODO: handle as ack sms failed.
+                    return;
                 }
             } catch (RemoteException ex) {
                 Log.e(TAG, "Failed to acknowledge the sms as catch the ex: " + ex);
-                // TODO: handle as send failed.
             }
+
+            // It means ACK failed, handle it as retry.
+            onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_RETRY,
+                    SmsManager.RESULT_ERROR_GENERIC_FAILURE);
         }
 
         @Override
@@ -268,20 +273,28 @@ public class VoWifiSmsManager extends ServiceManager {
                         + messageRef + "], result[" + result + "]");
             }
 
-            if (mISms == null) {
-                // TODO: handle as send failed.
+            if (!mReady || mISms == null) {
+                Log.e(TAG, "Failed to acknowledge sms report as mReady: " + mReady
+                        + ", mISms: " + mISms);
+                onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_FALLBACK,
+                        SmsManager.RESULT_ERROR_NO_SERVICE);
+                mSmsList.remove(new Sms(token));
+                return;
             }
 
             try {
                 int id = mISms.acknowledgeSmsReport(token, messageRef, getCauseFromResult(result));
                 if (id != Result.INVALID_ID) {
                     mSmsList.remove(new Sms(token));
-                } else {
-                    // TODO: handle as ack report failed.
+                    return;
                 }
             } catch (RemoteException ex) {
                 Log.e(TAG, "Failed to acknowledge the sms report as catch the ex: " + ex);
             }
+
+            // It means ACK failed, handle it as retry.
+            onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_RETRY,
+                    SmsManager.RESULT_ERROR_GENERIC_FAILURE);
         }
 
         @Override
@@ -297,13 +310,17 @@ public class VoWifiSmsManager extends ServiceManager {
                         + "], smsc[" + smsc + "], retry[" + retry + "], pdu[" + pdu + "]");
             }
 
-            if (mISms == null) {
-                // TODO: handle as send failed.
+            if (!mReady || mISms == null) {
+                Log.e(TAG, "Failed to send sms as mReady: " + mReady + ", mISms: " + mISms);
+                onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_FALLBACK,
+                        SmsManager.RESULT_ERROR_NO_SERVICE);
+                return;
             }
 
             try {
                 // FIXME: As the smsc string will be create as "new String(smsc)" in
-                // ImsSmsDispatcher, so we'd like to get the smsc self.
+                // ImsSmsDispatcher, so we'd like to get the smsc from SmsManagerEx.
+
                 // As normal, it should use IccUtils.bytesToHexString, and the smsc number
                 // could get as this:
                 // byte[] smscByte = IccUtils.hexStringToBytes(smsc);
@@ -315,23 +332,21 @@ public class VoWifiSmsManager extends ServiceManager {
                 int id = mISms.sendSms(token, messageRef,
                         1 /* Retry will be handled by framework, native needn't retry. */,
                         numberSMSC, IccUtils.bytesToHexString(pdu));
-                if (id == Result.INVALID_ID) {
-                    // TODO: handle as send failed.
-                } else {
+                if (id != Result.INVALID_ID) {
                     boolean requireSR = (pdu[0] & Sms.INDICATOR_STATUS_REPORT_REQUEST) > 0;
                     Log.d(TAG, "Send the sms as require status report: " + requireSR);
                     Sms sms = new Sms(
                             token, messageRef, Sms.STATUS_SEND, Sms.DIR_SEND, id, requireSR);
                     mSmsList.add(sms);
+                    return;
                 }
             } catch (RemoteException ex) {
                 Log.e(TAG, "Failed to send the sms as catch the ex: " + ex);
-                // TODO: handle as send failed.
             }
-        }
 
-        public void resetReadyState() {
-            mReady = false;
+            // It means send sms failed, maybe send sms failed or catch the exception.
+            onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_RETRY,
+                    SmsManager.RESULT_ERROR_GENERIC_FAILURE);
         }
 
         private int getCauseFromResult(int result) {
