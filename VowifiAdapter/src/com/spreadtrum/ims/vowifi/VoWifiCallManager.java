@@ -96,6 +96,7 @@ public class VoWifiCallManager extends ServiceManager {
     private static final int MSG_INVITE_CALL = 1;
     private static final int MSG_RELEASE_CALL = 2;
     private static final int MSG_AUTO_ANSWER = 3;
+    private static final int MSG_RETRY_TERMINATE_CALL = 4;
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -121,6 +122,14 @@ public class VoWifiCallManager extends ServiceManager {
                     break;
                 case MSG_AUTO_ANSWER:
                     answerCall((ImsCallSessionImpl) msg.obj);
+                    break;
+                case MSG_RETRY_TERMINATE_CALL:
+                    try {
+                        handleCallTermed((ImsCallSessionImpl) msg.obj, msg.arg1);
+                    } catch (RemoteException ex) {
+                        Log.e(TAG, "Failed to handle the call term when retry as ex: "
+                                + ex.toString());
+                    }
                     break;
             }
         }
@@ -1163,6 +1172,13 @@ public class VoWifiCallManager extends ServiceManager {
                     listener.callSessionTerminated(info);
                 }
             }
+        } else if (!callSession.getCallStateTracker().isMOCall()) {
+            // The call is MT call, but listener is null. It means the call do not attach
+            // session now. We'd like to handle the terminate after 500ms.
+            mHandler.sendMessageDelayed(mHandler.obtainMessage(MSG_RETRY_TERMINATE_CALL,
+                    termReasonCode, -1, callSession), 500);
+            Log.d(TAG, "The incoming call do not attach now, handle the terminate event later.");
+            return;
         }
 
         // After give the callback, close this call session as it is a participant
@@ -1465,7 +1481,7 @@ public class VoWifiCallManager extends ServiceManager {
         if (listener != null) {
             if (callSession.isEmergencyCall()) {
                 ImsReasonInfo info = new ImsReasonInfo(ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE,
-                    ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE, reason);
+                        ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE, reason);
                 listener.callSessionInitiatedFailed(info);
             } else {
                 // Receive 380 from service for a normal call
