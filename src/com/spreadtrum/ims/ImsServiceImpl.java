@@ -65,6 +65,7 @@ import com.spreadtrum.ims.ImsService;
 import com.spreadtrum.ims.data.ApnUtils;
 import com.android.internal.telephony.VolteConfig;
 import android.text.TextUtils;
+import com.spreadtrum.ims.vowifi.VoWifiConfiguration;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.CallRatState;
 
@@ -1430,7 +1431,11 @@ public class ImsServiceImpl extends MmTelFeature {
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
                     mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VOICE);
                     mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
-                    mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_SMS);
+                    if (VoWifiConfiguration.isSupportSMS(mContext)){
+                        mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_SMS);
+                    } else {
+                        mVowifiCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_SMS);
+                    }
                     if (imsManager.isVtEnabledByUser() && imsManager.isVtEnabledByPlatform()) {//SPRD:modify for bug810321
                         mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
                                 = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI;
