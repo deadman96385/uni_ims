@@ -202,7 +202,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                                         callForwardInfo.mToA = cfInfo.toa;
                                         callForwardInfo.mNumber = cfInfo.number;
                                         callForwardInfo.mTimeSeconds = cfInfo.timeSeconds;
-                                        callForwardInfo.mServiceClass = CommandsInterface.SERVICE_CLASS_VOICE;
+                                        callForwardInfo.mServiceClass = cfInfo.serviceClass;
                                         callForwardInfoList[i] = callForwardInfo;
                                         Log.i(TAG,"ACTION_QUERY_CF->callForwardInfo:" + callForwardInfo.toString());
                                     }
@@ -1325,7 +1325,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         String password = bundle.getString(EXTRA_PASSWORD, "");
         boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.queryFacilityLock(facility, password, serviceClass,
-                mHandler.obtainMessage(ACTION_QUERY_CB_EX, id, utEnabled ? 1 : 0, this));
+                mHandler.obtainMessage(ACTION_QUERY_CB, id, utEnabled ? 1 : 0, this));
     }
     private void getCLIRStatus(Bundle bundle) {
         Log.d(TAG, "onexcue getCLIRStatus = " + bundle.toString());
