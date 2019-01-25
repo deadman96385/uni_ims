@@ -16,6 +16,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.HandlerThread;
 import android.os.Message;
 import android.os.UserHandle;
 import android.os.AsyncResult;
@@ -92,6 +93,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
     };
     /* @} */
+    private HandlerThread mHandlerThread;
+
     public ImsServiceCallTracker(Context context,ImsRIL ci, PendingIntent intent, int id, ImsServiceImpl service,
                VoWifiServiceImpl wifiService){
         mContext = context;
@@ -101,7 +104,11 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         mImsServiceImpl = service;
         mImsService = (ImsService)context;//Add for data router
         mWifiService = wifiService;//Add for data router
-        mHandler = new ImsHandler(mContext.getMainLooper());
+        /* UNISOC: Fix 1006660, Handle Message on HandlerThread. @{ */
+        mHandlerThread = new HandlerThread("ImsServiceCallTracker");
+        mHandlerThread.start();
+        mHandler = new ImsHandler(mHandlerThread.getLooper());
+        /* @} */
         mCi.registerForImsCallStateChanged(mHandler, EVENT_IMS_CALL_STATE_CHANGED, null);
         mCi.registerForCallStateChanged(mHandler, EVENT_CALL_STATE_CHANGE, null);
         mCi.registerForNotAvailable(mHandler, EVENT_RADIO_NOT_AVAILABLE, null);
