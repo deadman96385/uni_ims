@@ -123,6 +123,9 @@ public class ImsServiceImpl extends MmTelFeature {
     protected static final int EVENT_RADIO_AVAILABLE                   = 118;
     protected static final int EVENT_RADIO_ON                          = 119;
 
+    protected static final int EVENT_GET_VIDEO_RESOLUTION              = 120;
+    protected static final int EVENT_GET_RAT_CAP                       = 121;
+
     /* UNISOC: add for bug968317 @{ */
     class VoLTECallAvailSyncStatus {
         public static final int VOLTE_CALL_AVAIL_SYNC_IDLE     = 0;
@@ -130,6 +133,11 @@ public class ImsServiceImpl extends MmTelFeature {
         public static final int VOLTE_CALL_AVAIL_SYNC_FAIL     = 2;
     }
     /*@}*/
+
+    public static final int NETWORK_RAT_PS_PREFER = 0;
+    public static final int NETWORK_RAT_PS_ONLY = 1;
+    public static final int NETWORK_RAT_CS_ONLY = 2;
+    public static final int NETWORK_RAT_PS_BY_IMS_STATUS = 3;
 
     private GsmCdmaPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -167,6 +175,8 @@ public class ImsServiceImpl extends MmTelFeature {
     // SPRD: 730973
     private boolean mVolteRegisterStateOld = false;
     private RadioInteractor mRadioInteractor;
+    private int mNetworkRATPrefer = NETWORK_RAT_PS_PREFER;//ps prefer
+    private int mServiceState = ServiceState.STATE_POWER_OFF;
 
     /**
      * AndroidP start@{:
@@ -520,7 +530,6 @@ public class ImsServiceImpl extends MmTelFeature {
                     log( "setTelephonyProperty isDualVolte:"+ImsManagerEx.isDualVoLTEActive());
                     TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state",
                             mImsServiceState.mImsRegistered ? "1" :"0");
-                    setPreferredNetworkRAT(isImsRegistered());
                     notifyRegisterStateChange();
                     log("EVENT_IMS_STATE_DONE->mServiceState:" + mImsServiceState.mImsRegistered);
                     break;
@@ -549,12 +558,6 @@ public class ImsServiceImpl extends MmTelFeature {
                     if (ar.exception == null) {
                         int[] ret = (int[]) ar.result;
                         if(ret != null && ret.length != 0){
-                        	// SPRD:654852 add srvcc broadcast
-//                        	if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
-//                                    || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
-//                        		mImsServiceState.mImsRegistered = false;
-//                        		
-//                        	}
                             mImsServiceState.mSrvccState = ret[0];
                             // SPRD 689713
                             if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
@@ -577,9 +580,29 @@ public class ImsServiceImpl extends MmTelFeature {
                     if (state != null && state.getDataRegState() == ServiceState.STATE_IN_SERVICE
                             && state.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE){
                         mImsRegister.enableIms();
-                        setVideoResolution(state);
+                        // White list refactor: get default video resolution
+                        mCi.getVideoResolution(this.obtainMessage(EVENT_GET_VIDEO_RESOLUTION));
                     }
+                    getSpecialRatcap(state);
                     setInitialAttachSosApn(state);
+                    break;
+                // White list refactor: get default video resolution
+                case EVENT_GET_VIDEO_RESOLUTION:
+                    if (ar.exception == null && ar.result != null && ar.result instanceof Integer) {
+                        Integer responseArray = (Integer)ar.result;
+                        int videoResolution = responseArray.intValue();
+                        setVideoResolution(videoResolution);
+                    }
+                    break;
+                case EVENT_GET_RAT_CAP:
+                    if (ar.exception == null && ar.result != null) {
+                        int[] responseArray = (int[]) ar.result;
+                        log("EVENT_GET_RAT_CAP " + responseArray[0]);
+                        mNetworkRATPrefer = responseArray[0];
+                        mImsService.updateImsFeature(mServiceId);
+                    } else {
+                        log("EVENT_GET_RAT_CAP ar.exception: " + ar.exception);
+                    }
                     break;
                 /* SPRD: add for bug594553 @{ */
                 case EVENT_RADIO_STATE_CHANGED:
@@ -1050,25 +1073,10 @@ public class ImsServiceImpl extends MmTelFeature {
         return mImsServiceState.mSrvccState;
     }
 
-    public void setVideoResolution(ServiceState state){
-        String registOperatorNumeric = state.getDataOperatorNumeric();
-        log("registOperatorNumeric = " + registOperatorNumeric);
-        if(registOperatorNumeric == null){
-            return;
-        }
-        String operatorCameraResolution = null;
-        mVolteConfig.loadVolteConfig(mContext);
-        if(mVolteConfig.containsCarrier(registOperatorNumeric)){
-            operatorCameraResolution = mVolteConfig.getCameraResolution(registOperatorNumeric);
-        }
-        if(operatorCameraResolution == null || TextUtils.isEmpty(operatorCameraResolution)){
-            return;
-        }
-        mImsConfigImpl.mDefaultVtResolution = Integer.parseInt(operatorCameraResolution);
-        log("ImsServiceImpl ==> setVideoResolution mDefaultVtResolution = " + operatorCameraResolution);
+    public void setVideoResolution(int videoResolution){
+        log("ImsServiceImpl ==> setVideoResolution mDefaultVtResolution = " + videoResolution);
         // SPRD:909828
-        mImsConfigImpl.sendVideoQualitytoIMS(Integer.parseInt(operatorCameraResolution));
-//        mImsConfigImpl.setVideoQualitytoPreference(Integer.parseInt(operatorCameraResolution));
+        mImsConfigImpl.sendVideoQualitytoIMS(videoResolution);
     }
 
     /* UNISOC: 630048 add sos apn for yes 4G @{*/
@@ -1141,11 +1149,6 @@ public class ImsServiceImpl extends MmTelFeature {
         } else {
             log("addListener-> listener already remove!");
         }
-    }
-    //SPRD: add for bug 771875
-    public void updateImsFeature(int feature, int value) {
-        log( "updateImsFeatures->feature:" + feature + " value:" + value);
-        updateImsFeatures(mImsService.isVoLTEEnabled(), mImsService.isVoWifiEnabled());
     }
 
     public void notifyRegisterStateChange() {
@@ -1397,11 +1400,12 @@ public class ImsServiceImpl extends MmTelFeature {
         ImsManager imsManager = ImsManager.getInstance(mContext,mPhone.getPhoneId());
         synchronized (mVolteCapabilities) {   // UNISOC: Add for bug978339, bug988585
             try {
+
                 if (volteEnable) {
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
                     mVolteCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VOICE);
-                    mVolteCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
+
                     if (imsManager.isVtEnabledByUser() && imsManager.isVtEnabledByPlatform()) {//SPRD:modify for bug805161
                         mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
                                 = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE;
@@ -1411,18 +1415,13 @@ public class ImsServiceImpl extends MmTelFeature {
                                 = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                         mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
                     }
-                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE]
-                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE;
-                    notifyCapabilitiesStatusChanged(mVolteCapabilities);
                 } else {
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE]
-                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+
                     mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VOICE);
-                    mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
                     mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_SMS);
                     mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
                 }
@@ -1430,7 +1429,6 @@ public class ImsServiceImpl extends MmTelFeature {
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
                     mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VOICE);
-                    mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
                     if (VoWifiConfiguration.isSupportSMS(mContext)){
                         mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_SMS);
                     } else {
@@ -1445,9 +1443,6 @@ public class ImsServiceImpl extends MmTelFeature {
                                 = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                         mVowifiCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VIDEO);
                     }
-                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI]
-                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI;
-                    notifyCapabilitiesStatusChanged(mVowifiCapabilities);
                 } else {
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
@@ -1456,6 +1451,29 @@ public class ImsServiceImpl extends MmTelFeature {
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI]
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                 }
+
+                if(isUtEnable()){
+                    mVolteCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
+                    mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE;
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI;
+                }else {
+                    mVolteCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
+                    mVowifiCapabilities.removeCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                }
+
+                if(volteEnable){
+                    notifyCapabilitiesStatusChanged(mVolteCapabilities);
+                }else if(wifiEnable){
+                    notifyCapabilitiesStatusChanged(mVowifiCapabilities);
+                }
+
                 synchronized (mImsRegisterListeners) {
                     for (IImsRegistrationListener l : mImsRegisterListeners.values()) {
                         l.registrationFeatureCapabilityChanged(
@@ -1593,6 +1611,35 @@ public class ImsServiceImpl extends MmTelFeature {
         mImsService.updateImsFeatureForAllService();
     }
 
+
+
+    public void getSpecialRatcap(ServiceState state) {
+
+        if (state != null && mCi != null) {
+            if (mServiceState != state.getState()) {
+                log("getSpecialRatcap: servaiceState: "+state.getState());
+                mCi.getSpecialRatcap(mHandler.obtainMessage(EVENT_GET_RAT_CAP));
+            }
+            mServiceState = state.getState();
+        }
+    }
+
+    public int getNetworkRATPrefer() {
+        return mNetworkRATPrefer;
+    }
+
+    public boolean isUtEnable(){
+        boolean isUtEnable = true;
+        if(mNetworkRATPrefer == NETWORK_RAT_PS_PREFER || mNetworkRATPrefer == NETWORK_RAT_PS_ONLY){
+            isUtEnable = true;
+        }else if(mNetworkRATPrefer == NETWORK_RAT_PS_BY_IMS_STATUS){
+            isUtEnable = isImsEnabled();
+        }else {
+            isUtEnable = false;
+        }
+        return isUtEnable;
+    }
+
     public void notifyImsPdnStateChange(int state){
         synchronized (mImsPdnStateListeners) {
             for (IImsPdnStateListener l : mImsPdnStateListeners.values()) {
@@ -1683,35 +1730,4 @@ public class ImsServiceImpl extends MmTelFeature {
         }
     }
     /*@}*/
-
-    /*UNISOC:add for bug982110
-     *Volte register: ps
-     *2/3/4G :cs
-     *  @} */
-    public void setPreferredNetworkRAT(boolean volteRegister) {
-        if(volteRegister == getVolteRegisterStateOld()){
-            return;
-        }
-        CarrierConfigManager carrierConfig = (CarrierConfigManager) mContext.getSystemService(
-                Context.CARRIER_CONFIG_SERVICE);
-        int networkPref = 0;
-        boolean setRat = false;
-        if (carrierConfig != null) {
-            PersistableBundle config = carrierConfig.getConfigForPhoneId(mPhone.getPhoneId());
-            if (config != null) {
-
-                setRat = config.getBoolean(CarrierConfigManagerEx.KEY_NETWORK_RAT_ON_SWITCH_IMS);
-                if (setRat) {
-                    networkPref = config.getInt(CarrierConfigManagerEx.KEY_NETWORK_RAT_PREFER_INT);
-                }
-            }
-        }
-        Log.d(TAG, "setPreferredNetworkRAT: networkPref = " + networkPref + " setRat = " + setRat);
-        if (setRat) {
-            if (volteRegister) {
-                networkPref = 0;
-            }
-            mRadioInteractor.setNetworkSpecialRATCap(networkPref, mPhone.getPhoneId());
-        }
-    }/*@}*/
 }
