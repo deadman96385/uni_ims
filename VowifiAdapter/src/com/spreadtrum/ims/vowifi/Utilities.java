@@ -641,6 +641,21 @@ public class Utilities {
         public static final int CATEGORY_VALUE_MARINE = 8;
         public static final int CATEGORY_VALUE_MOUNTAIN = 16;
 
+        public static boolean isRealEmergencyNumber(Context context, String phoneNumber) {
+            if (context == null || TextUtils.isEmpty(phoneNumber)) {
+                return false;
+            }
+
+            String realEccList = Settings.Global.getString(context.getContentResolver(),
+                    "ecc_list_real" + getPrimaryCard(context));
+            if (TextUtils.isEmpty(realEccList)) {
+                return false;
+            }
+
+            HashMap<String, String> eccList = parserEccList(realEccList);
+            return eccList.containsKey(phoneNumber);
+        }
+
         /**
          * byte to inverted bit
          */
@@ -677,8 +692,8 @@ public class Utilities {
             for (String eccNumber : eccNumbers) {
                 String[] eccInfo = eccNumber.split("@");
                 if (eccInfo.length != 2) {
-                    Log.w(TAG, "The current ecc info as this: " + eccNumber + ". INVALID!!!");
-                    continue;
+                    Log.w(TAG, "The current ecc number is: " + eccNumber + ". INVALID category!");
+                    eccListMap.put(eccNumber, EMUtils.DEFAULT_EMERGENCY_SERVICE_URN);
                 } else {
                     String urn = EMUtils.getEmergencyCallUrn(eccInfo[1]);
                     eccListMap.put(eccInfo[0], urn);
