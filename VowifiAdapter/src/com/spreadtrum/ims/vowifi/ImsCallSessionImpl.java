@@ -483,12 +483,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
 
         // Check if emergency call.
-        boolean isEmergencyService = profile.mServiceType == ImsCallProfile.SERVICE_TYPE_EMERGENCY;
-        boolean isEmergencyNumber = PhoneNumberUtils.isEmergencyNumber(callee);
+        boolean isRealEmergency = EMUtils.isRealEmergencyNumber(mContext, callee);
         String sosNumber = SystemProperties.get(PROP_KEY_FORCE_SOS_CALL, null);
         boolean forceSos = callee.equals(sosNumber);
 
-        if (isEmergencyService || isEmergencyNumber || forceSos) {
+        if (isRealEmergency || forceSos) {
             startEmergencyCall(callee);
         } else {
             startCall(callee);
