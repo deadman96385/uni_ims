@@ -217,20 +217,16 @@ public class ImsRegister {
                 mNumeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
                 // add for 796527
                 mVolteConfig.loadVolteConfig(mContext);
-                boolean isSimConfig = getSimConfig();
                 log("current mNumeric = "+mNumeric);
                 // add for Dual LTE
                 if (getLTECapabilityForPhone()) {
                     log("PrimaryCard : mLastNumeric = "+mLastNumeric);
                     if(!(mLastNumeric.equals(mNumeric))) {
-                        if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric)) && mImsService.allowEnableIms(mPhoneId)){
+                        if(mImsService.allowEnableIms(mPhoneId)){
                               SystemProperties.set("gsm.ims.enable" + mPhoneId, "1");
                               mCi.enableIms(null);
-                        } else if(isSimConfig && getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
-                              SystemProperties.set("gsm.ims.enable" + mPhoneId, "0");
-                              mCi.disableIms(null);
+                              mLastNumeric = mNumeric;
                         }
-                        mLastNumeric = mNumeric;
                     }
                 }else if(dualVoLTEActive()){
                     //need disable ims when primary card not register to whilte list network?

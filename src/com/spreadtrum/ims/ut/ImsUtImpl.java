@@ -1407,31 +1407,16 @@ public class ImsUtImpl extends IImsUt.Stub {
     }
 
     public boolean isUtEnabled() {
+        boolean isUtEnable = true;
         if (!(mPhone.isRadioOn())) {
             return false;
         }
-        CarrierConfigManager carrierConfig = (CarrierConfigManager) mContext.getSystemService(
-                Context.CARRIER_CONFIG_SERVICE);
-        int ratPrefer = 0;
-        boolean setRat = false;
-        if (carrierConfig != null) {
-            PersistableBundle config = carrierConfig.getConfigForPhoneId(mPhone.getPhoneId());
-            if (config != null) {
-                ratPrefer = config.getInt(CarrierConfigManagerEx.KEY_NETWORK_RAT_PREFER_INT, 0);
-                setRat = config.getBoolean(CarrierConfigManagerEx.KEY_NETWORK_RAT_ON_SWITCH_IMS, false);
-            }
-        }
 
-        Log.d(TAG, "Rat from configure file is " + ratPrefer+ " setRat = "+setRat);
-        //UNISOC:add for bug982110
-        if(setRat && mImsServiceImpl.isVoLteEnabled()){
-            return true;
+        if(mImsServiceImpl != null){
+            isUtEnable = mImsServiceImpl.isUtEnable();
         }
-
-        if (ratPrefer == 2 ) {
-            return false;
-        }
-        return true;
+        Log.d(TAG, "isUtEnable isUtEnable = " + isUtEnable);
+        return isUtEnable;
     }
 
     /**

@@ -1936,4 +1936,17 @@ public final class ImsRIL {
             riljLog("callMediaChangeRequestTimeOut, RadioInteractor is null");
         }
     }
+
+    //  White list refactor: get default video resolution
+    public void getVideoResolution(Message result) {
+        if (getRadioInteractor() != null) {
+            mRadioInteractor.getVideoResolution(result);
+        }
+    }
+
+    public void getSpecialRatcap(Message result) {
+        if (getRadioInteractor() != null) {
+            mRadioInteractor.getSpecialRatcap(result);
+        }
+    }
 }
