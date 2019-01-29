@@ -90,6 +90,12 @@ import android.telephony.data.DataProfile;
 public class ImsServiceImpl extends MmTelFeature {
     private static final String TAG = ImsServiceImpl.class.getSimpleName();
     private static final boolean DBG = true;
+
+    // send this broadcast for DM
+    private static final String VOLTE_REGISTED_BROADCAST = "com.spreadtrum.ims.VOLTE_REGISTED";
+    private static final String VOLTE_REGISTED_PAC_NAME = "com.sprd.dm.mbselfreg";
+    private static final String VOLTE_REGISTED_CLASSNAME = "com.sprd.dm.mbselfreg.DmReceiver";
+
     private static final int IMS_CALLING_RTP_TIME_OUT        = 1;
     private static final int IMS_INVALID_VOLTE_SETTING       =-1;  // UNISOC: Add for bug968317
 
@@ -529,6 +535,10 @@ public class ImsServiceImpl extends MmTelFeature {
                     //add for SPRD:Bug 678430
                     log( "setTelephonyProperty mServiceId:"+mServiceId+"mImsRegistered:"+mImsServiceState.mImsRegistered);
                     log( "setTelephonyProperty isDualVolte:"+ImsManagerEx.isDualVoLTEActive());
+                    // add for send IMS registed broadcast
+                    if (mImsServiceState.mImsRegistered) {
+                        sendImsRegistedBroadcast(mServiceId - 1);
+                    }
                     TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state",
                             mImsServiceState.mImsRegistered ? "1" :"0");
                     notifyRegisterStateChange();
@@ -777,6 +787,21 @@ public class ImsServiceImpl extends MmTelFeature {
         }
         return mServiceId;
     }
+
+    /**
+     * send this broadcast for DM
+     * @param phoneId
+     */
+    private void sendImsRegistedBroadcast(int phoneId) {
+
+        Intent intent = new Intent(VOLTE_REGISTED_BROADCAST);
+        intent.putExtra(ImsManager.EXTRA_PHONE_ID, phoneId);
+        intent.setFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+        intent.setComponent(new ComponentName(VOLTE_REGISTED_PAC_NAME, VOLTE_REGISTED_CLASSNAME));
+
+        mContext.sendBroadcast(intent);
+    }
+
 
     @Override
     public int getFeatureState() {
@@ -1067,7 +1092,7 @@ public class ImsServiceImpl extends MmTelFeature {
             	// SPRD 659914
                 if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
                     return false;
-                } else if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_FAILED || 
+                } else if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_FAILED ||
                 		mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_CANCELED) {
                 	return true;
                 }

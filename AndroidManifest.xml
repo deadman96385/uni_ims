@@ -3,6 +3,8 @@
     coreApp="true"
     android:sharedUserId="android.uid.phone" >
 
+    <protected-broadcast android:name="com.spreadtrum.ims.VOLTE_REGISTED" />
+
     <uses-permission android:name="android.permission.BROADCAST_STICKY" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="com.spreadtrum.vowifi.permission.ACCESS_CONFIGURATION" />
