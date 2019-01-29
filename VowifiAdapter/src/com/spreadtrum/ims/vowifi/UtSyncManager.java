@@ -9,7 +9,6 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
-import android.provider.Settings;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
 
@@ -74,7 +73,7 @@ public class UtSyncManager {
     }
 
     public void sync() {
-        boolean isAirplaneModeOff = isAirplaneModeOff();
+        boolean isAirplaneModeOff = Utilities.isAirplaneModeOff(mContext);
         Log.d(TAG, "Try to sync the UT items. mSynced[" + mSynced + "], mSyncedWhenAMOff["
                 + mSyncedWhenAMOff + "], isAirplaneModeOff[" + isAirplaneModeOff + "]");
 
@@ -121,11 +120,6 @@ public class UtSyncManager {
             Log.e(TAG, "Failed to get the CLIR statue as catch the RemoteException: "
                     + e.toString());
         }
-    }
-
-    private boolean isAirplaneModeOff() {
-        return Settings.Global.getInt(mContext.getContentResolver(),
-                Settings.Global.AIRPLANE_MODE_ON, 0) == 0;
     }
 
     private class AirplaneModeReceiver extends BroadcastReceiver {

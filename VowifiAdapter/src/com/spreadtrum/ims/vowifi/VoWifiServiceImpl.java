@@ -722,6 +722,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (mCallMgr != null) mCallMgr.onSRVCCStateChanged(state);
     }
 
+    public void notifyImsCNIInfo(int type, String info, int age) {
+        if (mRegisterMgr != null) {
+            mRegisterMgr.updateAccessNetInfo(type, info, age);
+        }
+    }
+
     private void init() {
         if (ImsManager.isWfcEnabledByPlatform(mContext)) {
             mPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
