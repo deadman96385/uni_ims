@@ -54,6 +54,10 @@ public abstract class ServiceManager {
     protected Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
+            if (handleNormalMessage(msg)) {
+                return;
+            }
+
             if (msg.what == MSG_PROCESS_PENDING_ACTION) {
                 processPendingAction();
             } else if (msg.what == MSG_REBIND_SERVICE) {
@@ -117,6 +121,10 @@ public abstract class ServiceManager {
 
     protected void unbindService() {
         mContext.unbindService(mConnection);
+    }
+
+    protected boolean handleNormalMessage(Message msg) {
+        return false;
     }
 
     private void processPendingAction() {

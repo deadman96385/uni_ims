@@ -111,6 +111,22 @@ public class VoWifiConfiguration {
         return false;
     }
 
+    public static boolean isRegRequestCNI(Context context) {
+        Cursor cursor = context.getContentResolver().query(URI_REG, null, null, null, null);
+        try {
+            if (cursor != null && cursor.moveToFirst()) {
+                int index = cursor.getColumnIndexOrThrow("withCNI");
+                return cursor.getInt(index) == 1 ? true : false;
+            }
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return false;
+    }
+
     public static boolean isSupportSMS(Context context) {
         Cursor cursor = context.getContentResolver().query(URI_MESSAGE, null, null, null, null);
         try {

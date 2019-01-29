@@ -101,6 +101,11 @@ public class Utilities {
         }
     }
 
+    public static boolean isAirplaneModeOff(Context context) {
+        return Settings.Global.getInt(context.getContentResolver(),
+                Settings.Global.AIRPLANE_MODE_ON, 0) == 0;
+    }
+
     public static boolean isCallWaitingEnabled() {
         return SystemProperties.getBoolean(PROP_KEY_SS_CW, true);
     }
@@ -1418,9 +1423,10 @@ public class Utilities {
         // AIDL - please update the first version number.
         // Native - please update the second version number.
         // Others - please update the third version number.
-        public static final String NUMBER = "1.0.1";
+        public static final String NUMBER = "1.0.2";
         //public static final String DETAIL = "Init";
-        public static final String DETAIL = "Get the urn from DB if there isn't category info.";
+        //public static final String DETAIL = "Get the urn from DB if there isn't category info.";
+        public static final String DETAIL = "Support require CNI when vowifi register.";
 
         public static String getVersionInfo() {
             return NUMBER + "[" + DETAIL + "]";
