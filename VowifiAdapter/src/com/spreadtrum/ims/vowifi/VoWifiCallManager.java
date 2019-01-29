@@ -1003,6 +1003,11 @@ public class VoWifiCallManager extends ServiceManager {
                     handleVoiceCodecNegociated(callSession, codecName);
                     break;
                 }
+                case JSONUtils.EVENT_CODE_CALL_IS_FORWARDED: {
+                    Toast.makeText(mContext, R.string.vowifi_call_forwarded, Toast.LENGTH_LONG)
+                            .show();
+                    break;
+                }
                 default:
                     Log.w(TAG, "The event '" + eventName + "' do not handle, please check!");
             }
