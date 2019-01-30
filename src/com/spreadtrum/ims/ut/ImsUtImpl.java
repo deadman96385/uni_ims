@@ -1325,7 +1325,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         String password = bundle.getString(EXTRA_PASSWORD, "");
         boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.queryFacilityLock(facility, password, serviceClass,
-                mHandler.obtainMessage(ACTION_QUERY_CB, id, utEnabled ? 1 : 0, this));
+                mHandler.obtainMessage(ACTION_QUERY_CB_EX, id, utEnabled ? 1 : 0, this));
     }
     private void getCLIRStatus(Bundle bundle) {
         Log.d(TAG, "onexcue getCLIRStatus = " + bundle.toString());
