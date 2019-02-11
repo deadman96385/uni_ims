@@ -218,6 +218,10 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
         private void handleMsgReset(int step) {
             Log.d(mTag, "Handle the reset message as step: " + step);
+
+            // Give the callback when the reset action start.
+            if (mCallback != null) mCallback.onResetStarted();
+
             if (mResetStep == RESET_STEP_DEREGISTER) {
                 if (mRegisterMgr.getCurRegisterState() == RegisterState.STATE_CONNECTED) {
                     deregisterInternal();
@@ -1376,6 +1380,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onRegisterStateChanged(int state, int stateCode);
 
         public void onReregisterFinished(boolean isSuccess, int errorCode);
+
+        public void  onResetStarted();
 
         /**
          * release result callback
