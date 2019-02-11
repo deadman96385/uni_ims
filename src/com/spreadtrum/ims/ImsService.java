@@ -146,6 +146,7 @@ public class ImsService extends Service {
     private static final int EVENT_WIFI_RTP_RECEIVED = 212;
     private static final int EVENT_UPDATE_DATA_ROUTER_FINISHED = 213;
     private static final int EVENT_NOTIFY_CP_VOWIFI_ATTACH_SUCCESSED = 214;
+    private static final int EVENT_WIFI_RESET_START  = 215;  // UNISOC: Add for bug1007100
 
     class ImsOperationType {
         public static final int IMS_OPERATION_SWITCH_TO_VOWIFI = 0;
@@ -819,6 +820,17 @@ public class ImsService extends Service {
                         }
                         mAttachVowifiSuccess = false;// SPRD:Add for bug604833
                         break;
+
+                    /* UNISOC: Add for bug1007100{@ */
+                    case EVENT_WIFI_RESET_START:
+
+                        mWifiRegistered = false;
+                        updateImsFeatureForAllService();
+
+                        Log.i(TAG, "EVENT_WIFI_RESET_START");
+                        break;
+                    /* @} */
+
                     case EVENT_WIFI_RESET_RESAULT:
                         int releaseResult = msg.arg1;
                         int errorCode = msg.arg2;
@@ -2373,6 +2385,13 @@ public class ImsService extends Service {
             mHandler.obtainMessage(EVENT_WIFI_REFRESH_RESAULT, errorCode, -1,
                     new Boolean(isSuccess)).sendToTarget();
         }
+
+        /* UNISOC: Add for bug1007100{@ */
+        @Override
+        public void onResetStarted() {
+            mHandler.obtainMessage(EVENT_WIFI_RESET_START).sendToTarget();
+        }
+        /* @} */
 
         @Override
         public void onResetFinished(int result, int errorCode) {
