@@ -1518,7 +1518,8 @@ public class ImsServiceImpl extends MmTelFeature {
             if (addr.matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}")) {
                 pcscfAdd = "1,\"" + addr + "\"";
             } else if (addr.contains(":")) {
-                pcscfAdd = "2,\"" + addr + "\"";
+                //UNISOC: add for bug1010337
+                pcscfAdd = "2,\"[" + addr + "]\"";
             }
 
             log( "setImsPcscfAddress pcscfAdd = " + pcscfAdd);
