@@ -328,8 +328,8 @@ public class ImsRegister {
                     log("xCap = " + xCap);
                     log("bspAddr = " + bspAddr);
                     log("conferenceUri = " + conferenceUri);
-                    String imei = mPhone.getDeviceId();
-                    if (imei != null) {
+                    String imei = mPhone.getImei();
+                    if (imei != null && !imei.equals("")) {
                         instanceId = "urn:gsma:imei:" + imei.substring(0, 8)
                                 + "-" + imei.substring(8, 14) + "-"
                                 + imei.substring(14);
