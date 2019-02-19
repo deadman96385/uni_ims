@@ -368,8 +368,10 @@ public class VoWifiCallManager extends ServiceManager {
         if (Utilities.DEBUG) Log.i(TAG, "Try to update all the calls' type to: " + type);
 
         mCurRatType = type;
-        for (ImsCallSessionImpl callSession : mSessionList) {
-            callSession.updateCallRatType(type);
+        synchronized (mSessionList) {
+            for (ImsCallSessionImpl callSession : mSessionList) {
+                callSession.updateCallRatType(type);
+            }
         }
     }
 
@@ -519,7 +521,9 @@ public class VoWifiCallManager extends ServiceManager {
     }
 
     public void removeCall(ImsCallSessionImpl callSession) {
-        removeCall(callSession, true);
+        synchronized (mSessionList) {
+            removeCall(callSession, true);
+        }
     }
 
     public void removeCall(ImsCallSessionImpl callSession, boolean needNotify) {
@@ -707,13 +711,15 @@ public class VoWifiCallManager extends ServiceManager {
     private ImsCallSessionImpl createCallSession(ImsCallProfile profile,
             IImsCallSessionListener listener, ImsVideoCallProviderImpl videoCallProvider,
             int callDir) {
-        ImsCallSessionImpl session = new ImsCallSessionImpl(mContext, this, profile, listener,
-                videoCallProvider, callDir, mCurRatType);
+        synchronized (mSessionList) {
+            ImsCallSessionImpl session = new ImsCallSessionImpl(mContext, this, profile, listener,
+                    videoCallProvider, callDir, mCurRatType);
 
-        // Add this call session to the list.
-        addCall(session);
+            // Add this call session to the list.
+            addCall(session);
 
-        return session;
+            return session;
+        }
     }
 
     private void inviteCall(ImsCallSessionImpl confSession) {
