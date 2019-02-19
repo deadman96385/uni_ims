@@ -1422,13 +1422,22 @@ public class Utilities {
     }
 
     public static class Version {
-        // AIDL - please update the first version number.
-        // Native - please update the second version number.
-        // Others - please update the third version number.
-        public static final String NUMBER = "1.0.2";
-        //public static final String DETAIL = "Init";
-        //public static final String DETAIL = "Get the urn from DB if there isn't category info.";
-        public static final String DETAIL = "Support require CNI when vowifi register.";
+        /**
+         * Update the version number please follow as this:
+         *     AIDL - please update the first version number.
+         *     Native - please update the second version number.
+         *     Others - please update the third version number.
+         */
+        public static final String NUMBER = "1.0.4";
+
+        /**
+         * Old detail as this:
+         * 1.0.0[Init]
+         * 1.0.1[Get the urn from DB if there isn't category info.]
+         * 1.0.2[Support require CNI when vowifi register.]
+         * 1.0.3[Get sms Tp-Mr from SIM, and sync SS after register.]
+         */
+        public static final String DETAIL = "Delay 500ms to handle the hold failed.";
 
         public static String getVersionInfo() {
             return NUMBER + "[" + DETAIL + "]";
