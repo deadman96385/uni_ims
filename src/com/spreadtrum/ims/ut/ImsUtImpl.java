@@ -436,8 +436,9 @@ public class ImsUtImpl extends IImsUt.Stub {
                         if(ar != null){
                             if (ar.exception != null) {
                                 int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
-                                if (ar.exception instanceof CommandException) {
-                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                //add for unisoc 1008518
+                                if (ar.exception instanceof com.android.sprd.telephony.CommandException) {
+                                    info = getImsReasonInfoFromCommandExceptionForEx((com.android.sprd.telephony.CommandException) ar.exception);
                                 }
                                 mImsUtListenerEx.utConfigurationQueryFailed((IImsUt)ar.userObj,
                                         msg.arg1,
@@ -982,6 +983,21 @@ public class ImsUtImpl extends IImsUt.Stub {
     }
 
     private int getImsReasonInfoFromCommandException(CommandException ce){
+        int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+        if(ce != null){
+            switch(ce.getCommandError()){
+                case FDN_CHECK_FAILURE:
+                    info = ImsReasonInfo.CODE_FDN_BLOCKED;
+                    break;
+                case RADIO_NOT_AVAILABLE:
+                    info = ImsReasonInfo.CODE_UT_SERVICE_UNAVAILABLE;
+                    break;
+            }
+        }
+        return info;
+    }
+    //add for unisoc 1008518
+    private int getImsReasonInfoFromCommandExceptionForEx(com.android.sprd.telephony.CommandException ce){
         int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
         if(ce != null){
             switch(ce.getCommandError()){
