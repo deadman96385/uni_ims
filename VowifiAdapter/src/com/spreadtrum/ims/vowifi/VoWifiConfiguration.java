@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.net.Uri.Builder;
 
 import com.spreadtrum.ims.vowifi.Utilities.ProviderUtils;
 
@@ -94,6 +95,14 @@ public class VoWifiConfiguration {
             Uri.parse(ProviderUtils.CONTENT_URI + "/" + ProviderUtils.FUN_CALL);
     private static final Uri URI_MESSAGE =
             Uri.parse(ProviderUtils.CONTENT_URI + "/" + ProviderUtils.FUN_MESSAGE);
+    private static final Uri URI_UT =
+            Uri.parse(ProviderUtils.CONTENT_URI + "/" + ProviderUtils.FUN_UT);
+
+    // The support query parameters.
+    private static final String PARAM_SUBID = "subId";
+    private static final String PARAM_MCC = "mcc";
+    private static final String PARAM_MNC = "mnc";
+    private static final String PARAM_GID = "gid";
 
     public static boolean isRegRequestPCNI(Context context) {
         // Do not support PCNI now.
@@ -130,6 +139,16 @@ public class VoWifiConfiguration {
         }
 
         return false;
+    }
+
+    public static Cursor getUtConfiguration(Context context) {
+        return context.getContentResolver().query(URI_UT, null, null, null, null);
+    }
+
+    public static Cursor getUtConfiguration(Context context, int subId) {
+        Builder builder = URI_UT.buildUpon();
+        Uri queryUri = builder.appendQueryParameter(PARAM_SUBID, String.valueOf(subId)).build();
+        return context.getContentResolver().query(queryUri, null, null, null, null);
     }
 
     public static boolean updateIkeFQDN(Context context, String fqdn) {

@@ -1387,10 +1387,11 @@ public class Utilities {
         public static final String KEY_UT_CF_RULE_MEDIA = "ut_cf_rule_media";
         public static final String KEY_UT_CF_CONDS = "ut_cf_conditions";
         public static final String KEY_UT_CF_ACTION_TARGET = "ut_cf_action_target";
-        public static final String KEY_UT_CW_ENABLED = "ut_cw_enabled";
         public static final String KEY_UT_CB_RULES = "ut_cb_rules";
         public static final String KEY_UT_CB_RULE_ENABLED = "ut_cb_rule_enabled";
         public static final String KEY_UT_CB_CONDS = "ut_cb_conditions";
+        public static final String KEY_UT_ENABLED = "ut_enabled";
+        public static final String KEY_UT_CLIR_M_PARAM = "ut_clir_m_param";
 
         public static final int UT_EVENT_CODE_BASE = 350;
         public static final int EVENT_CODE_UT_QUERY_CB_OK = UT_EVENT_CODE_BASE + 1;
@@ -1405,6 +1406,10 @@ public class Utilities {
         public static final int EVENT_CODE_UT_UPDATE_CF_FAILED = UT_EVENT_CODE_BASE + 10;
         public static final int EVENT_CODE_UT_UPDATE_CW_OK = UT_EVENT_CODE_BASE + 11;
         public static final int EVENT_CODE_UT_UPDATE_CW_FAILED = UT_EVENT_CODE_BASE + 12;
+        public static final int EVENT_CODE_UT_QUERY_CLIR_OK = UT_EVENT_CODE_BASE + 13;
+        public static final int EVENT_CODE_UT_QUERY_CLIR_FAILED = UT_EVENT_CODE_BASE + 14;
+        public static final int EVENT_CODE_UT_UPDATE_CLIR_OK = UT_EVENT_CODE_BASE + 15;
+        public static final int EVENT_CODE_UT_UPDATE_CLIR_FAILED = UT_EVENT_CODE_BASE + 16;
 
         public static final String EVENT_UT_QUERY_CB_OK = "ut_query_call_barring_ok";
         public static final String EVENT_UT_QUERY_CB_FAILED = "ut_query_call_barring_failed";
@@ -1418,6 +1423,10 @@ public class Utilities {
         public static final String EVENT_UT_UPDATE_CF_FAILED = "ut_update_call_forward_failed";
         public static final String EVENT_UT_UPDATE_CW_OK = "ut_update_call_waiting_ok";
         public static final String EVENT_UT_UPDATE_CW_FAILED = "ut_update_call_waiting_failed";
+        public static final String EVENT_UT_QUERY_CLIR_OK = "ut_query_clir_ok";
+        public static final String EVENT_UT_QUERY_CLIR_FAILED = "ut_query_clir_failed";
+        public static final String EVENT_UT_UPDATE_CLIR_OK = "ut_update_clir_ok";
+        public static final String EVENT_UT_UPDATE_CLIR_FAILED = "ut_update_clir_failed";
 
         // Query call forward result of media
         public static final String RULE_MEDIA_AUDIO = "audio";
@@ -1447,7 +1456,7 @@ public class Utilities {
          *     Native - please update the second version number.
          *     Others - please update the third version number.
          */
-        public static final String NUMBER = "1.0.5";
+        public static final String NUMBER = "2.0.0";
 
         /**
          * Old detail as this:
@@ -1456,8 +1465,9 @@ public class Utilities {
          * 1.0.2[Support require CNI when vowifi register.]
          * 1.0.3[Get sms Tp-Mr from SIM, and sync SS after register.]
          * 1.0.4[Delay 500ms to handle the hold failed.]
+         * 1.0.5[Handle the EM call with whole step. (PANI to PCNI)]
          */
-        public static final String DETAIL = "Handle the EM call with whole step. (PANI to PCNI)";
+        public static final String DETAIL = "Support query CLIR";
 
         public static String getVersionInfo() {
             return NUMBER + "[" + DETAIL + "]";

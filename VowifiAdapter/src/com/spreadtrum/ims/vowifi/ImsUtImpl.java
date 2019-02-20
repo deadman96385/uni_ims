@@ -2,10 +2,13 @@
 package com.spreadtrum.ims.vowifi;
 
 import android.content.Context;
+import android.database.Cursor;
+import android.database.CursorWrapper;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.RemoteException;
+import android.os.SystemProperties;
 import android.telephony.ims.ImsCallForwardInfo;
 import android.telephony.ims.ImsReasonInfo;
 import android.telephony.ims.ImsSsInfo;
@@ -57,6 +60,16 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final int CF_QUERY_SERVICE_CLASS_VIDEO = 2;
     private static final int SERVICE_CLASS_COMPLEX =
             SERVICE_CLASS_VOICE | CF_RESULT_SERVICE_CLASS_VIDEO;
+    // Do not changed. This defined is same as {@linke ImsPhoneMmiCode#UT_BUNDLE_KEY_CLIR}.
+    private static final String UT_BUNDLE_KEY_CLIR = "queryClir";
+
+    //***** Calling Line Identity Restriction Constants
+    // Used to get the CLIR status.
+    private static final String PROP_KEY_SS_CLIR = "gsm.ss.clir";
+    // The 'm' parameter from TS 27.007 7.7
+    private static final int CLIR_UNKNOWN     = 2;
+    // The 'n' parameter from TS 27.007 7.7
+    private static final int CLIR_DEFAULT     = 0;
 
     // If there isn't any CMD to disabled the UT after 15s.
     private static final int DELAY_DISALBE_UT = 15 * 1000;
@@ -71,10 +84,12 @@ public class ImsUtImpl extends IImsUt.Stub {
     private boolean mCWQueried = false;
     private boolean mCFQueried = false;
     private boolean mCBQueried = false;
+    private boolean mCLIRQueried = false;
 
     private IImsUtListener mListener = null;
     private IImsUtListenerEx mListenerEx = null;
 
+    private UtConfiguraion mConfiguration = null;
     private CmdManager mCmdManager = null;
     private VoWifiUTManager mUtManager = null;
     private IVoWifiUT mIUT = null;
@@ -98,7 +113,15 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final int MSG_ACTION_SET_FACILITY_LOCK = 109;
     private static final int MSG_ACTION_QUERY_FACILITY_LOCK = 110;
     private static final int MSG_ACTION_CHANGE_LOCK_PWD = 111;
-    private static final int MSG_ACTION_UPDATE_CLIR = 112;
+
+    private static final int MSG_ACTION_QUERY_CLIP = 112;
+    private static final int MSG_ACTION_QUERY_CLIR = 113;
+    private static final int MSG_ACTION_QUERY_COLP = 114;
+    private static final int MSG_ACTION_QUERY_COLR = 115;
+    private static final int MSG_ACTION_UPDATE_CLIP = 116;
+    private static final int MSG_ACTION_UPDATE_CLIR = 117;
+    private static final int MSG_ACTION_UPDATE_COLP = 118;
+    private static final int MSG_ACTION_UPDATE_COLR = 119;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -187,10 +210,14 @@ public class ImsUtImpl extends IImsUt.Stub {
                     nativeChangeBarringPwd(condition, oldPwd, newPwd);
                     break;
                 }
+                case MSG_ACTION_QUERY_CLIR: {
+                    nativeQueryCLIR();
+                    break;
+                }
                 case MSG_ACTION_UPDATE_CLIR: {
                     UTAction action = (UTAction) msg.obj;
-                    boolean enabled = (Boolean) action._params.get(0);
-                    nativeUpdateCLIR(enabled);
+                    int clirMode = (Integer) action._params.get(0);
+                    nativeUpdateCLIR(clirMode);
                     break;
                 }
             }
@@ -254,8 +281,15 @@ public class ImsUtImpl extends IImsUt.Stub {
 
     @Override
     protected void finalize() throws Throwable {
+        // Close the configuration cursor.
+        if (mConfiguration != null) {
+            mConfiguration.close();
+            mConfiguration = null;
+        }
+
         // Un-register the service changed.
         mUtManager.unregisterUTInterfaceChanged(mIUTChangedListener);
+
         super.finalize();
     }
 
@@ -275,6 +309,11 @@ public class ImsUtImpl extends IImsUt.Stub {
     public int queryCallBarring(int cbType) {
         if (Utilities.DEBUG) Log.i(TAG, "Try to query the call barring with the type: " + cbType);
 
+        if (!mConfiguration.isCBSupport(UtConfiguraion.SUPPORT_TYPE_QUERY)) {
+            Log.d(TAG, "Do not support query CB for this sub: " + mSubId);
+            return ImsUtInterface.INVALID;
+        }
+
         UTAction action = new UTAction("queryCallBarring", MSG_ACTION_QUERY_CALL_BARRING,
                 CMD_TIMEOUT, Integer.valueOf(cbType), "pwd",
                 Integer.valueOf(SERVICE_CLASS_NO_DEFINED));
@@ -283,8 +322,19 @@ public class ImsUtImpl extends IImsUt.Stub {
 
     @Override
     public int queryCallBarringForServiceClass(int cbType, int serviceClass){
-        // TODO
-        return -1;
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Try to query the call barring with the type: " + cbType
+                    + ", serviceClass: " + serviceClass);
+        }
+
+        if (!mConfiguration.isCBSupport(UtConfiguraion.SUPPORT_TYPE_QUERY)) {
+            Log.d(TAG, "Do not support query CB for this sub: " + mSubId);
+            return ImsUtInterface.INVALID;
+        }
+
+        UTAction action = new UTAction("queryCallBarring", MSG_ACTION_QUERY_CALL_BARRING,
+                CMD_TIMEOUT, Integer.valueOf(cbType), "pwd", Integer.valueOf(serviceClass));
+        return mCmdManager.addCmd(action);
     }
 
     /**
@@ -295,6 +345,11 @@ public class ImsUtImpl extends IImsUt.Stub {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to query the call forward as the condition: " + condition
                     + ", for the number: " + number);
+        }
+
+        if (!mConfiguration.isCFSupport(UtConfiguraion.SUPPORT_TYPE_QUERY)) {
+            Log.d(TAG, "Do not support query CF for this sub: " + mSubId);
+            return ImsUtInterface.INVALID;
         }
 
         UTAction action = new UTAction("queryCallForward", MSG_ACTION_QUERY_CALL_FORWARD,
@@ -309,6 +364,11 @@ public class ImsUtImpl extends IImsUt.Stub {
     public int queryCallWaiting() throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Try to query the call waiting.");
 
+        if (!mConfiguration.isCWSupport(UtConfiguraion.SUPPORT_TYPE_QUERY)) {
+            Log.d(TAG, "Do not support query CW for this sub: " + mSubId);
+            return ImsUtInterface.INVALID;
+        }
+
         UTAction action = new UTAction("queryCallWaiting", MSG_ACTION_QUERY_CALL_WAITING,
                 CMD_TIMEOUT);
         return mCmdManager.addCmd(action);
@@ -319,8 +379,15 @@ public class ImsUtImpl extends IImsUt.Stub {
      */
     @Override
     public int queryCLIR() throws RemoteException {
-        Log.w(TAG, "As CLIR based on UE, handle query CLIR as failed.");
-        return ImsUtInterface.INVALID;
+        if (Utilities.DEBUG) Log.i(TAG, "Try to query the CLIR");
+
+        if (!mConfiguration.isCLIRSupport(UtConfiguraion.SUPPORT_TYPE_QUERY)) {
+            Log.d(TAG, "Do not support query CLIR for this sub: " + mSubId);
+            return ImsUtInterface.INVALID;
+        }
+
+        UTAction action = new UTAction("queryCLIR", MSG_ACTION_QUERY_CLIR, CMD_TIMEOUT);
+        return mCmdManager.addCmd(action);
     }
 
     /**
@@ -370,6 +437,11 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + enable + ", barringList: " + Utilities.getStringFromArray(barringList));
         }
 
+        if (!mConfiguration.isCBSupport(UtConfiguraion.SUPPORT_TYPE_UPDATE)) {
+            Log.d(TAG, "Do not support update CB for this sub: " + mSubId);
+            return ImsUtInterface.INVALID;
+        }
+
         // For update call barring action, it will handle if user input MMI code in dialer.
         // So we'd like to query first to get the CB result before put action.
         boolean enabled = (enable == CommandsInterface.CF_ACTION_ENABLE);
@@ -391,8 +463,8 @@ public class ImsUtImpl extends IImsUt.Stub {
     @Override
     public int updateCallBarringForServiceClass(int cbType, int action,
              String[] barrList, int serviceClass) throws RemoteException {
-        // TODO
-        return -1;
+        Log.w(TAG, "Do not support update CB for service class now.");
+        return ImsUtInterface.INVALID;
     }
 
     /**
@@ -404,6 +476,11 @@ public class ImsUtImpl extends IImsUt.Stub {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to update the call forward with action: " + action + ", condition: "
                     + condition + ", number: " + number + ", timeSeconds: " + timeSeconds);
+        }
+
+        if (!mConfiguration.isCFSupport(UtConfiguraion.SUPPORT_TYPE_UPDATE)) {
+            Log.d(TAG, "Do not support update CF for this sub: " + mSubId);
+            return ImsUtInterface.INVALID;
         }
 
         UTAction updateAction = new UTAction("updateCallForward", MSG_ACTION_UPDATE_CALL_FORWARD,
@@ -428,6 +505,11 @@ public class ImsUtImpl extends IImsUt.Stub {
     public int updateCallWaiting(boolean enable, int serviceClass) throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Try to update the call waiting to enable: " + enable);
 
+        if (!mConfiguration.isCWSupport(UtConfiguraion.SUPPORT_TYPE_UPDATE)) {
+            Log.d(TAG, "Do not support update CW for this sub: " + mSubId);
+            return ImsUtInterface.INVALID;
+        }
+
         UTAction updateAction = new UTAction("updateCallWaiting", MSG_ACTION_UPDATE_CALL_WAITING,
                 CMD_TIMEOUT, Boolean.valueOf(enable), Integer.valueOf(serviceClass));
 
@@ -447,8 +529,25 @@ public class ImsUtImpl extends IImsUt.Stub {
      */
     @Override
     public int updateCLIR(int clirMode) throws RemoteException {
-        Log.w(TAG, "As CLIR based on UE, handle update CLIR as failed.");
-        return ImsUtInterface.INVALID;
+        if (Utilities.DEBUG) Log.i(TAG, "Try to update CLIR to mode: " + clirMode);
+
+        if (!mConfiguration.isCLIRSupport(UtConfiguraion.SUPPORT_TYPE_UPDATE)) {
+            Log.d(TAG, "Do not support update CLIR for this sub: " + mSubId);
+            return ImsUtInterface.INVALID;
+        }
+
+        UTAction updateAction = new UTAction("updateCLIR", MSG_ACTION_UPDATE_CLIR,
+                CMD_TIMEOUT, Integer.valueOf(clirMode));
+
+        if (!mCLIRQueried) {
+            UTAction queryAction = new UTAction(false /* needn't feedback */,
+                    false /* isn't extension */, "queryCLIR", MSG_ACTION_QUERY_CLIR,
+                    CMD_TIMEOUT, updateAction);
+
+            // Handle query CLIR first, and then update the CW settings.
+            mCmdManager.addCmd(queryAction);
+        }
+        return mCmdManager.addCmd(updateAction);
     }
 
     /**
@@ -602,6 +701,44 @@ public class ImsUtImpl extends IImsUt.Stub {
         mCWQueried = false;
         mCFQueried = false;
         mCBQueried = false;
+        mCLIRQueried = false;
+
+        if (mSubId < 0) {
+            // When the ImsUtImpl instantiation, the phone do not ready, and can not
+            // get the sub id. So init the sub id now.
+            mSubId = Utilities.getSubId(mPhoneId);
+            Log.d(TAG, "Bind this UtImpl[" + mPhoneId + "] for sub: " + mSubId);
+        }
+
+        // Get the configuration for this sub before prepare the UT.
+        if (mConfiguration != null) {
+            mConfiguration.close();
+            mConfiguration = null;
+        }
+        mConfiguration = new UtConfiguraion(
+                VoWifiConfiguration.getUtConfiguration(mContext, mSubId));
+    }
+
+    private void nativeQueryCLIR() {
+        if (Utilities.DEBUG) Log.i(TAG, "Native query the CLIR.");
+
+        boolean success = false;
+        try {
+            if (mIUT != null) {
+                int res = mIUT.queryCLIR();
+                if (res == Result.SUCCESS) success = true;
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to query the CLIR as catch the RemoteException: " + e);
+        }
+
+        // If the action is failed, process action failed.
+        if (!success) {
+            Log.e(TAG, "Native failed to query the CLIR.");
+            ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
+                    ImsReasonInfo.CODE_UNSPECIFIED);
+            mCmdManager.onActionFailed(error);
+        }
     }
 
     private void nativeQueryCallBarring(int condition) {
@@ -757,16 +894,15 @@ public class ImsUtImpl extends IImsUt.Stub {
         if (Utilities.DEBUG) Log.i(TAG, "Native change the call barring password to : " + newPwd);
     }
 
-    private void nativeUpdateCLIR(boolean enabled) {
-        if (Utilities.DEBUG) Log.i(TAG, "Native update the CLIR as enabled: " + enabled);
+    private void nativeUpdateCLIR(int clirMode) {
+        if (Utilities.DEBUG) Log.i(TAG, "Native update the CLIR as mode: " + clirMode);
 
         boolean success = false;
         try {
             if (mIUT != null) {
-                int res = mIUT.updateCLIR(enabled);
+                int res = mIUT.updateCLIR(clirMode);
                 if (res == Result.SUCCESS) {
                     success = true;
-                    handleUpdateActionOK();
                 }
             }
         } catch (RemoteException e) {
@@ -791,35 +927,50 @@ public class ImsUtImpl extends IImsUt.Stub {
             int eventCode = jObject.optInt(JSONUtils.KEY_EVENT_CODE, -1);
             switch (eventCode) {
                 case JSONUtils.EVENT_CODE_UT_QUERY_CF_OK: {
+                    Log.d(TAG, "Query call forward finished, the result is OK.");
                     mCFQueried = true;
-                    handleQueryCallForwardOK(parseCallForwardInfos(json));
+                    mCmdManager.onQueryCallForwardFinished(parseCallForwardInfos(json));
                     break;
                 }
                 case JSONUtils.EVENT_CODE_UT_QUERY_CB_OK: {
+                    Log.d(TAG, "Query call barring finished, the result is OK.");
                     mCBQueried = true;
-                    handleQueryCallBarringOK(parseCallBarringInfos(json));
+                    mCmdManager.onQueryCallBarringFinished(parseCallBarringInfos(json));
                     break;
                 }
                 case JSONUtils.EVENT_CODE_UT_QUERY_CW_OK: {
+                    Log.d(TAG, "Query call waiting finished, the result is OK.");
                     mCWQueried = true;
-                    boolean enabled = jObject.optBoolean(JSONUtils.KEY_UT_CW_ENABLED, false);
-                    handleQueryCallWaitingOK(enabled);
+                    boolean enabled = jObject.optBoolean(JSONUtils.KEY_UT_ENABLED, false);
+                    mCmdManager.onQueryCallWaitingFinished(enabled);
+                    break;
+                }
+                case JSONUtils.EVENT_CODE_UT_QUERY_CLIR_OK: {
+                    Log.d(TAG, "Query CLIR finished, the result is OK.");
+                    mCLIRQueried = true;
+                    int param = jObject.optInt(JSONUtils.KEY_UT_CLIR_M_PARAM, CLIR_UNKNOWN);
+                    mCmdManager.onQueryCLIRFinished(param);
                     break;
                 }
                 case JSONUtils.EVENT_CODE_UT_UPDATE_CB_OK:
                 case JSONUtils.EVENT_CODE_UT_UPDATE_CF_OK:
                 case JSONUtils.EVENT_CODE_UT_UPDATE_CW_OK: {
-                    handleUpdateActionOK();
+                    Log.d(TAG, "Update action finished, the result is ok.");
+                    mCmdManager.onUpdateActionSuccessed();
                     break;
                 }
                 case JSONUtils.EVENT_CODE_UT_QUERY_CB_FAILED:
                 case JSONUtils.EVENT_CODE_UT_QUERY_CF_FAILED:
                 case JSONUtils.EVENT_CODE_UT_QUERY_CW_FAILED:
+                case JSONUtils.EVENT_CODE_UT_QUERY_CLIR_FAILED:
                 case JSONUtils.EVENT_CODE_UT_UPDATE_CB_FAILED:
                 case JSONUtils.EVENT_CODE_UT_UPDATE_CF_FAILED:
-                case JSONUtils.EVENT_CODE_UT_UPDATE_CW_FAILED: {
+                case JSONUtils.EVENT_CODE_UT_UPDATE_CW_FAILED:
+                case JSONUtils.EVENT_CODE_UT_UPDATE_CLIR_FAILED: {
+                    Log.d(TAG, "Update action finished, but the result is failed.");
                     int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
-                    handleActionFailed(stateCode);
+                    mCmdManager.onActionFailed(
+                            new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, stateCode));
                     break;
                 }
             }
@@ -828,38 +979,6 @@ public class ImsUtImpl extends IImsUt.Stub {
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to handle the event as catch the RemoteException: " + e);
         }
-    }
-
-    private void handleQueryCallForwardOK(HashMap<Integer, ImsCallForwardInfo> infoMap)
-            throws RemoteException {
-        if (Utilities.DEBUG) Log.i(TAG, "Query call forward finished, the result is OK.");
-
-        mCmdManager.onQueryCallForwardFinished(infoMap);
-    }
-
-    private void handleQueryCallBarringOK(ArrayList<CallBarringInfo> infoList)
-            throws RemoteException {
-        if (Utilities.DEBUG) Log.i(TAG, "Query call barring finished, the result is OK.");
-
-        mCmdManager.onQueryCallBarringFinished(infoList);
-    }
-
-    private void handleQueryCallWaitingOK(boolean enabled) throws RemoteException {
-        if (Utilities.DEBUG) Log.i(TAG, "Query call waiting finished, the result is OK.");
-
-        mCmdManager.onQueryCallWaitingFinished(enabled);
-   }
-
-    private void handleUpdateActionOK() throws RemoteException {
-        if (Utilities.DEBUG) Log.i(TAG, "Update action finished, the result is ok.");
-
-        mCmdManager.onUpdateActionSuccessed();
-    }
-
-    private void handleActionFailed(int stateCode) throws RemoteException {
-        if (Utilities.DEBUG) Log.i(TAG, "Update action finished, the result is failed.");
-        ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, stateCode);
-        mCmdManager.onActionFailed(error);
     }
 
     private HashMap<Integer, ImsCallForwardInfo> parseCallForwardInfos(String jsonString)
@@ -1236,12 +1355,7 @@ public class ImsUtImpl extends IImsUt.Stub {
             if (mUtEnabled) {
                 processPendingAction();
             } else {
-                if (mSubId < 0) {
-                    // Init the sub id.
-                    mSubId = Utilities.getSubId(mPhoneId);
-                    Log.d(TAG, "Bind this UtImpl[" + mPhoneId + "] for sub: " + mSubId);
-                }
-
+                // Prepare the UT if it need UT attach.
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -1544,6 +1658,39 @@ public class ImsUtImpl extends IImsUt.Stub {
             processPendingAction();
         }
 
+        public void onQueryCLIRFinished(int mParam) throws RemoteException {
+            synchronized (mCmds) {
+                if (!mHandleCmd) {
+                    Log.e(TAG, "Do not handle any cmd now, shouldn't query CLIR finished.");
+                    return;
+                }
+
+                if (mCmds.size() < 1) {
+                    Log.e(TAG, "There isn't any pending action, shouldn't query CW finished.");
+                    return;
+                }
+
+                Integer key = mCmds.getFirst();
+                UTAction action = mUTActions.get(key);
+                Log.d(TAG, "Query CLIR finished, action is " + action._action);
+
+                if (action._needFeedback && mListener != null) {
+                    // Refer to {@link ImsPhoneMmiCode#onQueryClirComplete} to build the bundle.
+                    Bundle bundle = new Bundle();
+                    int nParam = SystemProperties.getInt(PROP_KEY_SS_CLIR, CLIR_DEFAULT);
+                    bundle.putIntArray(UT_BUNDLE_KEY_CLIR, new int[] {nParam, mParam});
+                    mListener.utConfigurationQueried(ImsUtImpl.this, key, bundle);
+                }
+
+                mUTActions.remove(key);
+                mCmds.remove(key);
+                mHandleCmd = false;
+            }
+
+            // After action finished, we need try to start the next pending action.
+            processPendingAction();
+        }
+
         public void onUpdateActionSuccessed()
                 throws RemoteException {
             synchronized (mCmds) {
@@ -1580,12 +1727,20 @@ public class ImsUtImpl extends IImsUt.Stub {
                 case MSG_ACTION_QUERY_CALL_WAITING:
                 case MSG_ACTION_QUERY_CALL_FORWARDING_OPTION:
                 case MSG_ACTION_QUERY_FACILITY_LOCK:
+                case MSG_ACTION_QUERY_CLIR:
+                case MSG_ACTION_QUERY_CLIP:
+                case MSG_ACTION_QUERY_COLR:
+                case MSG_ACTION_QUERY_COLP:
                     return ACTION_TYPE_QUERY;
                 case MSG_ACTION_UPDATE_CALL_BARRING:
                 case MSG_ACTION_UPDATE_CALL_FORWARD:
                 case MSG_ACTION_UPDATE_CALL_WAITING:
                 case MSG_ACTION_UPDATE_CALL_FORWARDING_OPTION:
                 case MSG_ACTION_SET_FACILITY_LOCK:
+                case MSG_ACTION_UPDATE_CLIR:
+                case MSG_ACTION_UPDATE_CLIP:
+                case MSG_ACTION_UPDATE_COLR:
+                case MSG_ACTION_UPDATE_COLP:
                     return ACTION_TYPE_UPDATE;
             }
 
@@ -1643,4 +1798,104 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
     }
 
+    private static class UtConfiguraion extends CursorWrapper {
+
+        private static final int SUPPORT_TYPE_QUERY = 1;
+        private static final int SUPPORT_TYPE_UPDATE = 2;
+
+        private static final String COL_UT_SUPPORT = "utSupport";
+        private static final String COL_UT_CW = "utCW";
+        private static final String COL_UT_CF = "utCF";
+        private static final String COL_UT_CB = "utCB";
+        private static final String COL_UT_CLIR = "utCLIR";
+        private static final String COL_UT_CLIP = "utCLIP";
+        private static final String COL_UT_COLR = "utCOLR";
+        private static final String COL_UT_COLP = "utCOLP";
+
+        private static int sIndexUtSupport = -1;
+        private static int sIndexUtCW = -1;
+        private static int sIndexUtCF = -1;
+        private static int sIndexUtCB = -1;
+        private static int sIndexUtCLIR = -1;
+        private static int sIndexUtCLIP = -1;
+        private static int sIndexUtCOLR = -1;
+        private static int sIndexUtCOLP = -1;
+
+        private boolean mSupport = false;
+
+        public UtConfiguraion(Cursor cursor) {
+            super(cursor);
+
+            if (sIndexUtSupport < 0) {
+                sIndexUtSupport = mCursor.getColumnIndexOrThrow(COL_UT_SUPPORT);
+                sIndexUtCW = mCursor.getColumnIndexOrThrow(COL_UT_CW);
+                sIndexUtCF = mCursor.getColumnIndexOrThrow(COL_UT_CF);
+                sIndexUtCB = mCursor.getColumnIndexOrThrow(COL_UT_CB);
+                sIndexUtCLIR = mCursor.getColumnIndexOrThrow(COL_UT_CLIR);
+                sIndexUtCLIP = mCursor.getColumnIndexOrThrow(COL_UT_CLIP);
+                sIndexUtCOLR = mCursor.getColumnIndexOrThrow(COL_UT_COLR);
+                sIndexUtCOLP = mCursor.getColumnIndexOrThrow(COL_UT_COLP);
+            }
+
+            // Will be only one item.
+            mCursor.moveToFirst();
+            mSupport = mCursor.getInt(sIndexUtSupport) > 0;
+        }
+
+        public boolean isCWSupport(int supportType) {
+            if (mSupport) {
+                return (mCursor.getInt(sIndexUtCW) & supportType) > 0;
+            } else {
+                return false;
+            }
+        }
+
+        public boolean isCFSupport(int supportType) {
+            if (mSupport) {
+                return (mCursor.getInt(sIndexUtCF) & supportType) > 0;
+            } else {
+                return false;
+            }
+        }
+
+        public boolean isCBSupport(int supportType) {
+            if (mSupport) {
+                return (mCursor.getInt(sIndexUtCB) & supportType) > 0;
+            } else {
+                return false;
+            }
+        }
+
+        public boolean isCLIRSupport(int supportType) {
+            if (mSupport) {
+                return (mCursor.getInt(sIndexUtCLIR) & supportType) > 0;
+            } else {
+                return false;
+            }
+        }
+
+        public boolean isCLIPSupport(int supportType) {
+            if (mSupport) {
+                return (mCursor.getInt(sIndexUtCLIP) & supportType) > 0;
+            } else {
+                return false;
+            }
+        }
+
+        public boolean isCOLRSupport(int supportType) {
+            if (mSupport) {
+                return (mCursor.getInt(sIndexUtCOLR) & supportType) > 0;
+            } else {
+                return false;
+            }
+        }
+
+        public boolean isCOLPSupport(int supportType) {
+            if (mSupport) {
+                return (mCursor.getInt(sIndexUtCOLP) & supportType) > 0;
+            } else {
+                return false;
+            }
+        }
+    }
 }
