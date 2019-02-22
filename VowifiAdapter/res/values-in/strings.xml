@@ -23,4 +23,11 @@
 <string name="vowifi_conf_none_participant">"Tidak terdapat peserta, akhiri panggilan"</string>
 <string name="vowifi_conf_do_not_support">"Tindakan ini saat ini tidak didukung"</string>
 <string name="vowifi_conf_can_not_invite_more">"Tidak bisa mengundang peserta lain ke konferensi karena sudah terisi 6 peserta"</string>
+    <string name="vowifi_request_update_failed">"Tolak permintaan dari jarak jauh"</string>
+     <string name="vowifi_request_update_success">"Terima permintaan dari jarak jauh"</string>
+     <string name="vowifi_update_to_rx_success">"Hanya penerimaan video"</string>
+     <string name="vowifi_update_to_tx_success">"Hanya pengiriman video"</string>
+     <string name="vowifi_hold_received">"Panggilan diadakan"</string>
+     <string name="vowifi_resume_received">"Panggilan diaktifkan"</string>
+
 </resources>

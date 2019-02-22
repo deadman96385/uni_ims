@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"Tắt"</string>
      <string name="vowifi_connected_checkbox_text">"Không hiển thị lại"</string>
      <string name="vowifi_connected_message">"Không thể thực hiện cuộc gọi khẩn cấp bằng gọi qua Wi-Fi, Thiết bị tự chuyển sang mạng di động (2G/3G) để thực hiện cuộc gọi khẩn cấp. Bạn muốn tiếp tục dịch vụ gọi qua Wi-Fi hay tắt gọi qua Wi-Fi?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"Yêu cầu nâng cấp cuộc gọi video đã hết thời gian chờ"</string>
 </resources>

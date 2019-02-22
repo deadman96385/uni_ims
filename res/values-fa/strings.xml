@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"غیرفعال‌ کردن"</string>
      <string name="vowifi_connected_checkbox_text">"دیگر نشان داده نشود"</string>
      <string name="vowifi_connected_message">"تماس‌های اضطراری از طریق تماس Wi-Fi امکان‌پذیر نیست، دستگاه به منظور برقراری تماس اضطراری به‌طور خودکار به یک شبکه سلولی تلفن همراه (2G/3G) جابجا می‌شود. آیا می‌خواهید خدمات تماس Wi-Fi را ادامه بدهید یا تماس Wi-Fi را غیرفعال می‌کنید؟"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"مهلت درخواست ارتقاء تماس ویدئویی به پایان رسید"</string>
 </resources>

@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"अक्षम करें"</string>
      <string name="vowifi_connected_checkbox_text">"फिर से न दिखाएं "</string>
      <string name="vowifi_connected_message">"WiFi-कॉलिंग द्वारा आपातकालीन कॉल संभव नहीं है, उपकरण आपातकालीन कॉल करने के लिए स्वतः किसी मोबाइल नेटवर्क (2G/3G) पर चला जाएगा. आप WiFi-कॉलिंग सेवा जारी रखना चाहते हैं या Wi-Fi कॉलिंग अक्षम करना?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"विडियो कॉल के अपग्रेड के अनुरोध का टाइम समाप्त हो गया है"</string>
 </resources>

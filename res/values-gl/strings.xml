@@ -47,4 +47,6 @@
 <string name="vowifi_connected_disable">Deshabilitar</string>
 <string name="vowifi_connected_checkbox_text">"Non mostrar de novo"</string>
 <string name="vowifi_connected_message">"Non se poden facer chamadas de emerxencia mediante Chamadas WiFi. O dispositivo cambia automaticamente á rede móbil (2G/3G) para efectuar chamadas de emerxencia. Quere continuar co servizo de Chamadas WiFi ou desactivar as chamadas WiFi?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"Esgotouse o tempo de espera da petición de actualización das chamadas de vídeo"</string>
+
 </resources>

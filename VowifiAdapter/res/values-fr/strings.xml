@@ -28,4 +28,6 @@
      <string name="vowifi_update_to_rx_success">"Réception vidéo uniquement"</string>
      <string name="vowifi_update_to_tx_success">"Transmission vidéo uniquement"</string>
 
+    <string name="vowifi_hold_received">"Appel en attente"</string>
+     <string name="vowifi_resume_received">"Appel récupéré"</string>
 </resources>

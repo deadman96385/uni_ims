@@ -23,4 +23,11 @@
 <string name="vowifi_conf_none_participant">"ไม่มีผู้เข้าร่วม สิ้นสุดการโทร"</string>
 <string name="vowifi_conf_do_not_support">"ไม่รองรับการดำเนินการนี้ในขณะนี้"</string>
 <string name="vowifi_conf_can_not_invite_more">"ไม่สามารถเชิญผู้เข้าร่วมรายอื่นให้เข้าร่วมประชุมสายได้เนื่องจากมีผู้เข้าร่วมครบ 6 รายแล้ว"</string>
+    <string name="vowifi_request_update_failed">"ปฏิเสธการร้องขอจากระยะไกล"</string>
+     <string name="vowifi_request_update_success">"ยอมรับการร้องขอจากระยะไกล"</string>
+     <string name="vowifi_update_to_rx_success">"การรับวิดีโอเท่านั้น"</string>
+     <string name="vowifi_update_to_tx_success">"การส่งวิดีโอเท่านั้น"</string>
+     <string name="vowifi_hold_received">"โทรขึ้น"</string>
+     <string name="vowifi_resume_received">"เรียกคืนข้อมูลการโทร"</string>
+
 </resources>

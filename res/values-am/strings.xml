@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"ያሰናክሉ"</string>
      <string name="vowifi_connected_checkbox_text">"ዳግም አታሳይ"</string>
      <string name="vowifi_connected_message">"«የአደጋ ጊዜ ጥሪዎች በWiFi ጥሪ በኩል የሚቻሉ አይደሉም፣ መሣሪያው የአደጋ ጊዜ ጥሪን ለማድረግ በራስ-ሰር ወደ የተንቀሳቃሽ ስልክ አውታረ መረብ (2G/3G) ይቀይራል። የWiFi ጥሪን መቀጠል ይፈልጋሉ ወይስ የWiFi ጥሪን ማሰናከል?»"</string>
+    <string name="request_of_upgrade_vt_call_timeout">«የቪዲዮ ጥሪ ማሳደጊያ ጥያቄው ጊዜ አልፏል»</string>
 </resources>

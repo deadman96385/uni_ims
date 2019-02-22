@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"မလုပ္ေဆာင္ႏိုင္ပါ"</string>
      <string name="vowifi_connected_checkbox_text">"ထပ္၍ မျပပါႏွင့္"</string>
      <string name="vowifi_connected_message">"အေရးေပၚဖုန္းမ်ားကို Wi-Fi-ေခၚဆိုမႈျဖင့္ ေခၚရန္မျဖစ္ႏိုင္ပါ။ အေရးေပၚဖုန္းေခၚရန္ စက္သည္ ဆယ္လူလာ ကြန္ရက္တစ္ခု (2G/3G) သို႔ ေအာ္တို ေျပာင္းေပးသည္။ Wi-Fi-ဖုန္းေခၚဆို ဝန္ေဆာင္မႈကို သင္ ဆက္လုပ္ခ်င္ပါသလား သို႔မဟုတ္ Wi-Fi ဖုန္းေခၚျခင္းကို ပိတ္လုိပါသလား။"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"ဗီဒီယိုဖုန္းေခၚဆိုမႈကို အဆင့္ျမွင့္ရန္ ေတာင္းဆိုခ်ိန္ ကုန္သြားပါၿပီ"</string>
 </resources>

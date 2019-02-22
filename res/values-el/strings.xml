@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"Απενεργοποίηση"</string>
      <string name="vowifi_connected_checkbox_text">"Να μην εμφανιστεί ξανά"</string>
      <string name="vowifi_connected_message">"Δεν είναι δυνατή η πραγματοποίηση κλήσεων έκτακτης ανάγκης μέσω κλήσεων WiFi. Η συσκευή κάνει αυτόματη αλλαγή σε δίκτυο κινητής τηλεφωνίας (2G/3G) για την πραγματοποίηση κλήσης έκτακτης ανάγκης. Θέλετε να συνεχίσετε την υπηρεσία κλήσεων WiFi ή να απενεργοποιήσετε τις κλήσεις Wi-Fi;"</string>
+    <string name="request_of_upgrade_vt_call_timeout">Έληξε το χρονικό όριο του αιτήματος αναβάθμισης κλήσης βίντεο</string>
 </resources>

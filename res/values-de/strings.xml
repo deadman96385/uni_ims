@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"Deaktivieren"</string>
      <string name="vowifi_connected_checkbox_text">"Nicht noch einmal anzeigen"</string>
      <string name="vowifi_connected_message">"Notrufe sind per WLAN-Anruf nicht möglich. Das Gerät wechselt automatisch zu einem Mobilfunknetz (2G/3G), um einen Notruf zu tätigen. Möchten Sie mit dem WLAN-Anruf fortfahren oder WLAN-Anruf deaktivieren?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"Zeitüberschreitung bei der Videoanruf-Aufrüstungsanforderung"</string>
 </resources>

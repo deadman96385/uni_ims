@@ -20,4 +20,7 @@
 <string name="vowifi_conf_none_participant">"No hi ha cap participant, finalitzeu la trucada"</string>
 <string name="vowifi_conf_do_not_support">"Actualment no és compatible amb aquesta acció"</string>
 <string name="vowifi_conf_can_not_invite_more">"No podeu convidar un altre participant a la conferència perquè ja conté 6 participants"</string>
+    <string name="vowifi_hold_received">"Trucada retinguda"</string>
+     <string name="vowifi_resume_received">Trucada recuperada</string>
+
 </resources>

@@ -23,4 +23,11 @@
 <string name="vowifi_conf_none_participant">"Katılımcı yok, aramayı sonlandır"</string>
 <string name="vowifi_conf_do_not_support">"Bu eylem şu an desteklenmiyor"</string>
 <string name="vowifi_conf_can_not_invite_more">"Halen 6 katılımcı olduğundan konferansa başka bir katılımcı davet edilemiyor"</string>
+    <string name="vowifi_request_update_failed">"Uzaktan reddetme isteği"</string>
+     <string name="vowifi_request_update_success">"Uzaktan kabul etme isteği"</string>
+     <string name="vowifi_update_to_rx_success">"Sadece video alımı"</string>
+     <string name="vowifi_update_to_tx_success">"Sadece video gönderimi"</string>
+     <string name="vowifi_hold_received">"Çağrı bekletildi" </string>
+     <string name="vowifi_resume_received">"Alınan çağrı"</string>
+
 </resources>

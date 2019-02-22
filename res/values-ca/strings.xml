@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"Desactiva"</string>
      <string name="vowifi_connected_checkbox_text">"No ho tornis a mostrar"</string>
      <string name="vowifi_connected_message">"No es poden realitzar trucades d\'emergència mitjançant les trucades Wi-Fi. El dispositiu canvia automàticament a la xarxa mòbil (2G/3G) per realitzar trucades d\'emergència. Voleu continuar amb el servei de trucades Wi-Fi o voleu desactivar-lo?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"S’ha superat el límit de temps per a la sol·licitud de millora de la videotrucada"</string>
 </resources>

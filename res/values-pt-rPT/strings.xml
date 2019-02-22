@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"Desativar"</string>
      <string name="vowifi_connected_checkbox_text">"Não mostrar novamente"</string>
      <string name="vowifi_connected_message">"Não é possível realizar chamadas de emergência através de Wi-Fi, O dispositivo muda automaticamente para uma rede celular (2G/3G) para realizar uma chamada de emergência. Pretende continuar a usar o serviço de chamadas por Wi-Fi ou desativá-lo?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"O tempo limite do pedido de atualização de videochamadas terminou"</string>
 </resources>
