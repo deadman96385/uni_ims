@@ -48,4 +48,6 @@
      <string name="vowifi_connected_disable">"Inhabilitar"</string>
      <string name="vowifi_connected_checkbox_text">"No volver a mostrar"</string>
      <string name="vowifi_connected_message">"Las llamadas de emergencia no se pueden realizar a través de llamadas vía wifi. El dispositivo cambia automáticamente a una red celular (2G/3G) para realizar una llamada de ese tipo. ¿Desea continuar con el servicio de llamada vía wifi o desea desactivarlo?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"Se agotó el tiempo para la solicitud de actualización de llamada de video"</string>
+
 </resources>

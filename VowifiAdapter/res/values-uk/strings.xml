@@ -23,4 +23,11 @@
 <string name="vowifi_conf_none_participant">"Немає жодного учасника, завершення виклику"</string>
 <string name="vowifi_conf_do_not_support">"Ця дія наразі не підтримується"</string>
 <string name="vowifi_conf_can_not_invite_more">"Неможливо запросити ще одного учасника приєднатися до конференц-виклику, оскільки вже є 6 учасників"</string>
+    <string name="vowifi_request_update_failed">"Дистанційне відхиляння запиту"</string>
+     <string name="vowifi_request_update_success">"Дистанційне підтвердження запиту"</string>
+     <string name="vowifi_update_to_rx_success">"Тільки прийом відео"</string>
+     <string name="vowifi_update_to_tx_success">"Тільки передача відео"</string>
+     <string name="vowifi_hold_received">"утримання виклику"</string>
+     <string name="vowifi_resume_received">"Виклик видправлено"</string>
+
 </resources>

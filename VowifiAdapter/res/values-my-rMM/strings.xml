@@ -23,4 +23,11 @@
 <string name="vowifi_conf_none_participant">"ပါဝင္တက္ေရာက္သူ မရွိပါ၊ ဖုန္းခ်ပါ"</string>
 <string name="vowifi_conf_do_not_support">"ဤလုပ္ေဆာင္ခ်က္ကို ယခု ပံ့ပိုးမေပးပါ"</string>
 <string name="vowifi_conf_can_not_invite_more">"ပါဝင္တက္ေရာက္သူ 6 ဦး ျပည့္ၿပီးျဖစ္၍ အစည္းအေဝးသို႔ အျခားတက္ေရာက္သူ ဖိတ္ေခၚ၍ မရပါ။"</string>
+    <string name="vowifi_request_update_failed">"အေဝးမွ ျငင္းပယ္ရန္ ေတာင္းဆိုမႈ"</string>
+     <string name="vowifi_request_update_success">"အေဝးမွ လက္ခံရန္ ေတာင္းဆိုမႈ"</string>
+     <string name="vowifi_update_to_rx_success">"ဗီဒီယို လက္ခံျခင္းအတြက္သာ"</string>
+     <string name="vowifi_update_to_tx_success">"ဗီဒီယို လႊင့္ထုတ္ျခင္းအတြက္သာ"</string>
+     <string name="vowifi_hold_received">"ဖုန္းကိုင္ပါ"</string>
+     <string name="vowifi_resume_received">"ဖုန္းေခၚဆိုမႈျပန္လည္ရယူျပီး"</string>
+
 </resources>

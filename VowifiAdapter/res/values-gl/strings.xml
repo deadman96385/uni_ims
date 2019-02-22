@@ -20,4 +20,7 @@
 <string name="vowifi_conf_none_participant">"Non hai ningún participante, finalice a chamada"</string>
 <string name="vowifi_conf_do_not_support">"Non é compatible con esta acción agora"</string>
 <string name="vowifi_conf_can_not_invite_more">"Non pode convidar outro participante á conferencia debido a que xa ten 6 participantes"</string>
+    <string name="vowifi_hold_received">"Chamada mantida"</string>
+     <string name="vowifi_resume_received">"Chamada recuperada"</string>
+
 </resources>

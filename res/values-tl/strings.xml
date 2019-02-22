@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"I-disable"</string>
      <string name="vowifi_connected_checkbox_text">"Huwag nang ipakitang muli"</string>
      <string name="vowifi_connected_message">"Hindi posible ang mga emergency na tawag sa pamamagitan ng Pagtawag gamit ang WiFi, Lumilipat ang device mula sa auto papunta sa isang cellular network (2G/3G) para gumawa ng emergency na tawag. Gusto mo bang ituloy ang serbisyo sa Pagtawag gamit ang WiFi or i-disable ang pagtawag gamit ang Wi-Fi?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"Nag-time out ang kahilingan sa pag-upgrade ng video call"</string>
 </resources>

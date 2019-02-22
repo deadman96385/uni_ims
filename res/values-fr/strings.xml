@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"Désactiver"</string>
      <string name="vowifi_connected_checkbox_text">"Ne plus afficher"</string>
      <string name="vowifi_connected_message">"Les appels d\'urgence ne pouvant pas être passés par VoWiFi, l\'appareil basculera automatiquement sur le réseau cellulaire (2G/3G). Souhaitez-vous continuer à utiliser le service VoWiFi, ou le désactiver ?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">" Le délai de la demande de mise à niveau de l’appel vidéo a expiré "</string>
 </resources>

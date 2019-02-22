@@ -20,4 +20,7 @@
 <string name="vowifi_conf_none_participant">"Δεν υπάρχει κανένας συμμετέχων, τερματισμός της κλήσης"</string>
 <string name="vowifi_conf_do_not_support">"Να μην υποστηρίζεται αυτή η ενέργεια τώρα"</string>
 <string name="vowifi_conf_can_not_invite_more">"Δεν είναι δυνατή η πρόσκληση άλλου συμμετέχοντα στη συνδιάσκεψη γιατί έχει ήδη 6 συμμετέχοντες"</string>
+    <string name="vowifi_hold_received">"Κλήση σε αναμονή"</string>
+     <string name="vowifi_resume_received">"Ανάκτηση κλήσης"</string>
+
 </resources>

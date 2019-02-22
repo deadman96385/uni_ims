@@ -23,4 +23,11 @@
 <string name="vowifi_conf_none_participant">"Không có bất kỳ người tham gia nào, kết thúc cuộc gọi"</string>
 <string name="vowifi_conf_do_not_support">"Hiện không hỗ trợ hành động này"</string>
 <string name="vowifi_conf_can_not_invite_more">"Không mời được người tham gia khác vào hội nghị vì đã có 6 người tham gia"</string>
+    <string name="vowifi_request_update_failed">"Yêu cầu từ xa bị từ chối"</string>
+     <string name="vowifi_request_update_success">"Yêu cầu từ xa được chấp nhận"</string>
+     <string name="vowifi_update_to_rx_success">"Chỉ nhận video"</string>
+     <string name="vowifi_update_to_tx_success">"Chỉ truyền video"</string>
+     <string name="vowifi_hold_received">"Cuộc gọi bị chặn"</string>
+     <string name="vowifi_resume_received">" Cuộc gọi được nhận"</string>
+
 </resources>

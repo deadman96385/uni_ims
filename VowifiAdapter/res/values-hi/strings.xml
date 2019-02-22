@@ -20,4 +20,8 @@
     <string name="vowifi_conf_do_not_support">"इस समय इस क्रिया का समर्थन नहीं किया जाता।"</string>
     <string name="vowifi_conf_connect_timeout">"कान्फ्रेंस सर्वर से जुड़ने की समय-सीमा समाप्त"</string>
     <string name="vowifi_conf_can_not_invite_more">"कान्फ्रेंस में किसी अन्य सहभागी को आमंत्रित नहीं कर सकते क्योंकि इसमें पहले से ही 6 सहभागी हैं"</string>
+    <string name="vowifi_update_to_rx_success">"केवल वीडियो रिसेप्शन"</string>
+     <string name="vowifi_update_to_tx_success">"केवल वीडियो ट्रांसमिशन"</string>
+     <string name="vowifi_hold_received">"कॉल हुई"</string>
+     <string name="vowifi_resume_received">"कॉल पुनः प्राप्त की गई"</string>
 </resources>

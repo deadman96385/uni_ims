@@ -23,4 +23,11 @@
 <string name="vowifi_conf_none_participant">"«ምንም ተሳታፊ የለም፣ ጥሪውን ይዝጉት»"</string>
 <string name="vowifi_conf_do_not_support">"«አሁን ይህን እርምጃ አይደግፍም»"</string>
 <string name="vowifi_conf_can_not_invite_more">"«ጉባዔው አስቀድሞ 6 ተሳታፊዎችን ስለያዘ ሌላ ተሳታፊን ወደ ጉባዔውን መጋበዝ አይቻልም»"</string>
+    <string name="vowifi_request_update_failed">«ጥያቄን በርቀት አትቀበል»</string>
+     <string name="vowifi_request_update_success">«ጥያቄን በርቀት ተቀበል»</string>
+     <string name="vowifi_update_to_rx_success">«ቪዲዮን መቀበል ብቻ»</string>
+     <string name="vowifi_update_to_tx_success">«ቪዲዮን ማስተላለፍ ብቻ»</string>
+     <string name="vowifi_hold_received">"ጥሪው ተይዟል"</string>
+     <string name="vowifi_resume_received">ጥሪ ተገኝቷል</string>
+
 </resources>

@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"Letiltás"</string>
      <string name="vowifi_connected_checkbox_text">"Ne jelenjen meg újra"</string>
      <string name="vowifi_connected_message">"A segélyhívások nem lehetségesek Wi-Fi-híváson keresztül. Az eszköz automatikusan mobilhálózatra (2G/3G) vált a segélyhíváshoz. Kívánja folytatni a WiFi-hívás szolgáltatást vagy letiltja a Wi-Fi hívást?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"Időtúllépés a videohívás-frissítési igény során"</string>
 </resources>

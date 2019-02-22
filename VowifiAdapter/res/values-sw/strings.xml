@@ -23,4 +23,11 @@
 <string name="vowifi_conf_none_participant">"Hakuna mshiriki yoyote, kata simu"</string>
 <string name="vowifi_conf_do_not_support">"Usikubali hatua hii sasa hivi"</string>
 <string name="vowifi_conf_can_not_invite_more">"Huwezi kualika mshiriki mwingine kwenye mkutano kwani tayari una washiki 6"</string>
+    <string name="vowifi_request_update_failed">"Kukubali agizo la mbali"</string>
+     <string name="vowifi_request_update_success">"Kukataa agizo la mbali"</string>
+     <string name="vowifi_update_to_rx_success">"Upokeaji wa video pekee"</string>
+     <string name="vowifi_update_to_tx_success">"Urushaji wa video pekee"</string>
+     <string name="vowifi_hold_received">"Simu imesimamishwa"</string>
+     <string name="vowifi_resume_received">"Simu imerudishwa"</string>
+
 </resources>

@@ -40,4 +40,13 @@
      <string name="low_battery_continue_video_call">"Ja"</string>
      <string name="low_battery_convert_to_voice_call">"Converteer"</string>
 
+    <string name="request_of_upgrade_vt_call_timeout">‘Time-out voor de aanvraag van de videogesprek-upgrade’</string>
+     <string name="handover_to_volte_success">"Omschakeling naar VoLTE voor betere spraakkwaliteit"</string>
+     <string name="vowifi_attation">"Vowifi-waarschuwing"</string>
+     <string name="vowifi_regist_fail_content">"Netwerk ondersteunt vowifi niet"</string>
+     <string name="vowifi_connected_title">"Emergency calls via Wi-Fi Calling"</string>
+     <string name="vowifi_connected_continue">"Doorgaan"</string>
+     <string name="vowifi_connected_disable">"Disable"</string>
+     <string name="vowifi_connected_checkbox_text">"do not show again"</string>
+     <string name="vowifi_connected_message">‘Noodoproepen zijn niet mogelijk via Wi-Fi-oproep. Het apparaat schakelt automatisch over naar een mobiel netwerk (2G/3G) om een noodoproep te plaatsen.’ Wilt u doorgaan met de Wi-Fi-oproepservice of wilt u Wi-Fi-oproep uitschakelen?’</string>
 </resources>

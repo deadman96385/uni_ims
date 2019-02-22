@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"Devre dışı bırak"</string>
      <string name="vowifi_connected_checkbox_text">"Bir daha gösterme"</string>
      <string name="vowifi_connected_message">""Acil durum aramaları Wi-Fi Arama üzerinden mümkün değildir; Acil durum araması yapmak için cihaz otomatik olarak hücresel ağa (2G/3G) geçiş yapıyor. Wi-Fi Arama hizmetine devam etmek istiyor musunuz ya da Wi-Fi aramayı devre dışı bırakmak istiyor musunuz?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"Video arama yükseltme isteği zaman aşımına uğradı"</string>
 </resources>

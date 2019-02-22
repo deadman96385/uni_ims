@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"Zima"</string>
      <string name="vowifi_connected_checkbox_text">"Usionyeshe tena"</string>
      <string name="vowifi_connected_message">"Simu za dharura haziwezekani kupitia Wi-Fi Calling, kifaa hubadilisha kiotomatiki kwa mtandao wa simu (2G/3G) ili upige simu ya dharura. Unataka kuendelea na huduma ya Wi-Fi Calling au kuilemaza?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"Muda wa agizo la uboreshaji wa simu ya video umekwisha"</string>
 </resources>

@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"تعطيل"</string>
      <string name="vowifi_connected_checkbox_text">"عدم عرض ذلك مجددًا"</string>
      <string name="vowifi_connected_message">"لا يمكن إجراء مكالمات طوارئ من خلال الاتصال عبر WiFi، سيقوم الجهاز بتبديل الإعداد تلقائي إلى شبكة خلوية (2G/3G) لإجراء مكالمة طوارئ. هل تريد الاستمرار في خدمة الاتصال عبر WiFi أو تعطيل خدمة الاتصال عبر Wi-Fi؟"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"انتهت مهلة طلب ترقية مكالمة الفيديو"</string>
 </resources>

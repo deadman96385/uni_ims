@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"Отключить"</string>
      <string name="vowifi_connected_checkbox_text">"Больше не показывать"</string>
      <string name="vowifi_connected_message">"Экстренные вызовы через WiFi-Calling невозможны. Чтобы сделать экстренный вызов, устройство автоматически переключается на работу в сотовой сети (2G/3G). Продолжить работу сервиса WiFi-Calling или отключить звонки через Wi-Fi?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"Закончилось время ожидания для запроса на обновление видеовызова"</string>
 </resources>

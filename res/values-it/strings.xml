@@ -48,4 +48,5 @@
      <string name="vowifi_connected_disable">"Disattiva"</string>
      <string name="vowifi_connected_checkbox_text">"Non mostrare più"</string>
      <string name="vowifi_connected_message">"Impossibile effettuare chiamate di emergenza tramite Chiamata WiFi. Il dispositivo passa automaticamente a una rete cellulare (2G/3G) per effettuare una chiamata di emergenza. Continuare il servizio Chiamata WiFi o disattivare Chiamata Wi-Fi?"</string>
+    <string name="request_of_upgrade_vt_call_timeout">"La richiesta di potenziamento della videochiamata è scaduta"</string>
 </resources>
