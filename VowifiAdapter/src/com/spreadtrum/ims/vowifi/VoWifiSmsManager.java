@@ -1,6 +1,7 @@
 package com.spreadtrum.ims.vowifi;
 
 import android.content.Context;
+import android.os.AsyncResult;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -17,6 +18,7 @@ import com.android.ims.internal.IVoWifiSmsCallback;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.gsm.SmsMessage;
 import com.android.internal.telephony.uicc.IccUtils;
+import com.android.sprd.telephony.RadioInteractor;
 
 import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
@@ -40,7 +42,12 @@ public class VoWifiSmsManager extends ServiceManager {
     private ArrayList<Sms> mSmsList= new ArrayList<Sms>();
     private HashMap<Integer, ImsSmsImpl> mSmsImpls = new HashMap<Integer, ImsSmsImpl>();
 
+    private static final int GET_TPMR_TIMEOUT = 5 * 1000; // 5s
+
     private static final int MSG_HANDLE_EVENT = 1;
+    private static final int MSG_GET_TPMR = 2;
+    private static final int MSG_SET_TPMR = 3;
+    private static final int MSG_GET_TPMR_TIMEOUT = 4;
     private class MyHandler extends Handler {
         public MyHandler(Looper looper) {
             super(looper);
@@ -48,8 +55,33 @@ public class VoWifiSmsManager extends ServiceManager {
 
         @Override
         public void handleMessage(Message msg) {
-            if (msg.what == MSG_HANDLE_EVENT) {
-                handleEvent((String) msg.obj);
+            switch (msg.what) {
+                case MSG_HANDLE_EVENT:
+                    handleEvent((String) msg.obj);
+                    break;
+                case MSG_GET_TPMR: {
+                    Log.d(TAG, "Handle the get Tp-Mr result now.");
+                    mHandler.removeMessages(MSG_GET_TPMR_TIMEOUT);
+
+                    ImsSmsImpl smsImpl = (ImsSmsImpl) getSmsImplementation(msg.arg1);
+                    AsyncResult ar = (AsyncResult) msg.obj;
+                    if (smsImpl != null && ar != null) {
+                        Sms sms = (Sms) ar.userObj;
+                        smsImpl.onGetTpMr(sms, ar);
+                    }
+                    break;
+                }
+                case MSG_SET_TPMR: {
+                    Log.d(TAG, "Set Tp-Mr finished, ar: " + ((AsyncResult) msg.obj));
+                    break;
+                }
+                case MSG_GET_TPMR_TIMEOUT: {
+                    ImsSmsImpl smsImpl = (ImsSmsImpl) getSmsImplementation(msg.arg1);
+                    if (smsImpl != null) {
+                        smsImpl.onGetTpMrError((Sms) msg.obj);
+                    }
+                    break;
+                }
             }
         }
     }
@@ -124,45 +156,56 @@ public class VoWifiSmsManager extends ServiceManager {
             switch (eventCode) {
                 case JSONUtils.EVENT_CODE_SMS_SEND_FINISHED: {
                     int token = jObject.optInt(JSONUtils.KEY_SMS_TOKEN);
-                    int messageRef = jObject.optInt(JSONUtils.KEY_SMS_MESSAGE_REF);
                     boolean success = jObject.optBoolean(JSONUtils.KEY_SMS_RESULT);
                     int sendStatus = ImsSmsImplBase.SEND_STATUS_OK;
                     int errorCode = SmsManager.RESULT_ERROR_NONE;
+
+                    Sms sms = findSmsByToken(token);
+                    if (sms == null) {
+                        Log.e(TAG, "Failed to find the sms by the token: " + token);
+                        break;
+                    }
+
                     if (success) {
-                        Sms sms = findSmsByToken(token);
                         sms._status = Sms.STATUS_SEND_FINISHED;
+                        if (!sms._requireStatusReport) {
+                            mSmsList.remove(sms);
+                        }
                     } else {
                         sendStatus = ImsSmsImplBase.SEND_STATUS_ERROR_FALLBACK;
                         errorCode = jObject.optInt(JSONUtils.KEY_SMS_REASON);
                         // Handle as error and it will fallback to CS, remove from the map.
                         mSmsList.remove(new Sms(token));
                     }
-                    smsImpl.onSendSmsResult(token, messageRef, sendStatus, errorCode);
+                    smsImpl.onSendSmsResult(token, sms._messageRef, sendStatus, errorCode);
                     break;
                 }
                 case JSONUtils.EVENT_CODE_SMS_RECEIVED: {
-                    String pdu = jObject.optString(JSONUtils.KEY_SMS_PDU);
-                    if (TextUtils.isEmpty(pdu)) {
+                    String pduHexString = jObject.optString(JSONUtils.KEY_SMS_PDU);
+                    if (TextUtils.isEmpty(pduHexString)) {
                         Log.e(TAG, "Failed to notify sms received as pdu is empty.");
                         return;
                     }
 
                     int token = generateToken();
-                    Sms sms = new Sms(token, -1, Sms.DIR_RECEIVED, Sms.STATUS_RECEIVED, -1, false);
+                    byte[] pdu = IccUtils.hexStringToBytes(pduHexString);
+                    SmsMessage smsMsg = SmsMessage.newFromCDS(pdu);
+                    Sms sms = new Sms(token, smsMsg.mMessageRef, Sms.DIR_RECEIVED,
+                            Sms.STATUS_RECEIVED, pdu);
                     mSmsList.add(sms);
-                    smsImpl.onSmsReceived(token, smsImpl.getSmsFormat(),
-                            IccUtils.hexStringToBytes(pdu));
+                    smsImpl.onSmsReceived(token, smsImpl.getSmsFormat(), pdu);
                     break;
                 }
                 case JSONUtils.EVENT_CODE_SMS_STATUS_REPORT_RECEIVED: {
-                    String pdu = jObject.optString(JSONUtils.KEY_SMS_PDU);
-                    if (TextUtils.isEmpty(pdu)) {
+                    String pduHexString = jObject.optString(JSONUtils.KEY_SMS_PDU);
+
+                    if (TextUtils.isEmpty(pduHexString)) {
                         Log.e(TAG, "Failed to notify sms received as pdu is empty.");
                         return;
                     }
 
-                    byte[] pduByte = IccUtils.hexStringToBytes(pdu);
-                    SmsMessage smsMsg = SmsMessage.newFromCDS(pduByte);
+                    byte[] pdu = IccUtils.hexStringToBytes(pduHexString);
+                    SmsMessage smsMsg = SmsMessage.newFromCDS(pdu);
                     Sms sms = findSmsByMessageRef(smsMsg.mMessageRef);
                     int token = -1;
                     if (sms == null) {
@@ -173,11 +216,8 @@ public class VoWifiSmsManager extends ServiceManager {
                         token = sms._token;
                         sms._status = Sms.STATUS_REPORT_RECEIVED;
                     }
-                    int messageRefFromJSON = jObject.optInt(JSONUtils.KEY_SMS_MESSAGE_REF);
-                    Log.d(TAG, "saved msgRef: " + smsMsg.mMessageRef + ", messageRefFromJSON: "
-                            + messageRefFromJSON);
                     smsImpl.onSmsStatusReportReceived(
-                            token, smsMsg.mMessageRef, smsImpl.getSmsFormat(), pduByte);
+                            token, smsMsg.mMessageRef, smsImpl.getSmsFormat(), pdu);
                     break;
                 }
             }
@@ -230,10 +270,12 @@ public class VoWifiSmsManager extends ServiceManager {
         private int mPhoneId;
         private boolean mReady = false;
         private VoWifiSmsManager mSmsMgr;
+        private RadioInteractor mRadioInteractor;
 
         protected ImsSmsImpl(VoWifiSmsManager smsMgr, int phoneId) {
             mSmsMgr = smsMgr;
             mPhoneId = phoneId;
+            mRadioInteractor = new RadioInteractor(mContext);
         }
 
         @Override
@@ -262,7 +304,7 @@ public class VoWifiSmsManager extends ServiceManager {
             }
 
             // It means ACK failed, handle it as retry.
-            onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_RETRY,
+            onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_FALLBACK,
                     SmsManager.RESULT_ERROR_GENERIC_FAILURE);
         }
 
@@ -293,7 +335,7 @@ public class VoWifiSmsManager extends ServiceManager {
             }
 
             // It means ACK failed, handle it as retry.
-            onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_RETRY,
+            onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_FALLBACK,
                     SmsManager.RESULT_ERROR_GENERIC_FAILURE);
         }
 
@@ -310,43 +352,22 @@ public class VoWifiSmsManager extends ServiceManager {
                         + "], smsc[" + smsc + "], retry[" + retry + "], pdu[" + pdu + "]");
             }
 
-            if (!mReady || mISms == null) {
-                Log.e(TAG, "Failed to send sms as mReady: " + mReady + ", mISms: " + mISms);
+            if (!mReady || mISms == null || mRadioInteractor == null) {
+                Log.e(TAG, "Failed to send sms as mReady: " + mReady + ", mISms: " + mISms
+                        + ", mRadioInteractor: " + mRadioInteractor);
                 onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_FALLBACK,
                         SmsManager.RESULT_ERROR_NO_SERVICE);
                 return;
             }
 
-            try {
-                // FIXME: As the smsc string will be create as "new String(smsc)" in
-                // ImsSmsDispatcher, so we'd like to get the smsc from SmsManagerEx.
+            // Get the TP-MR from SIM, after get the response, send the SMS actually.
+            Sms sms = new Sms(
+                    token, messageRef, Sms.STATUS_SEND, Sms.DIR_SEND, pdu);
+            Message getTpMr = mHandler.obtainMessage(MSG_GET_TPMR, mPhoneId, token, sms);
+            mRadioInteractor.getTPMRState(getTpMr, mPhoneId);
 
-                // As normal, it should use IccUtils.bytesToHexString, and the smsc number
-                // could get as this:
-                // byte[] smscByte = IccUtils.hexStringToBytes(smsc);
-                // int length = smscByte[0];
-                // String numberSMSC = PhoneNumberUtils.calledPartyBCDToString(smscByte, 1, length);
-                int subId = Utilities.getSubId(mPhoneId);
-                String numberSMSC = SmsManagerEx.getDefault().getSmscForSubscriber(subId);
-                Log.d(TAG, "Send sms with smsc: " + numberSMSC);
-                int id = mISms.sendSms(token, messageRef,
-                        1 /* Retry will be handled by framework, native needn't retry. */,
-                        numberSMSC, IccUtils.bytesToHexString(pdu));
-                if (id != Result.INVALID_ID) {
-                    boolean requireSR = (pdu[0] & Sms.INDICATOR_STATUS_REPORT_REQUEST) > 0;
-                    Log.d(TAG, "Send the sms as require status report: " + requireSR);
-                    Sms sms = new Sms(
-                            token, messageRef, Sms.STATUS_SEND, Sms.DIR_SEND, id, requireSR);
-                    mSmsList.add(sms);
-                    return;
-                }
-            } catch (RemoteException ex) {
-                Log.e(TAG, "Failed to send the sms as catch the ex: " + ex);
-            }
-
-            // It means send sms failed, maybe send sms failed or catch the exception.
-            onSendSmsResult(token, messageRef, ImsSmsImplBase.SEND_STATUS_ERROR_RETRY,
-                    SmsManager.RESULT_ERROR_GENERIC_FAILURE);
+            Message timeout = mHandler.obtainMessage(MSG_GET_TPMR_TIMEOUT, mPhoneId, token, sms);
+            mHandler.sendMessageDelayed(timeout, GET_TPMR_TIMEOUT);
         }
 
         private int getCauseFromResult(int result) {
@@ -359,6 +380,80 @@ public class VoWifiSmsManager extends ServiceManager {
                 default:
                     return CommandsInterface.GSM_SMS_FAIL_CAUSE_UNSPECIFIED_ERROR;
             }
+        }
+
+        private void onGetTpMr(Sms sms, AsyncResult ar) {
+            if (sms == null || ar.exception != null || ar.result == null) {
+                Log.e(TAG, "Error to get the TP-MR. sms: " + sms + ", exception: " + ar.exception
+                        + ", TP-MR: " + ar.result);
+                onGetTpMrError(sms);
+                return;
+            }
+
+            int[] tpmr = (int[]) ar.result;
+            // if SMS over IP of Vowifi still can be used,use the TpMr value for SMS over IP:
+            Log.d(TAG, "Get the TP-MR from SIM, current TP-MR: " + tpmr[0]);
+            if ((tpmr[0] < 0) || (tpmr[0] >= 255)) {
+                sms._messageRef = 0;
+                sms._pdu[1] = (byte) 0;
+            } else {
+                sms._messageRef = tpmr[0] + 1;
+                sms._pdu[1] = (byte) sms._messageRef;
+            }
+
+            // Send the SMS with the actually TP-MR.
+            if (sendSmsInternal(sms)) {
+                Log.d(TAG, "Start send sms process, set the new Tp-Mr to SIM.");
+                if (mRadioInteractor != null){
+                    Message setTpMr = mHandler.obtainMessage(MSG_SET_TPMR);
+                    mRadioInteractor.setTPMRState(sms._messageRef, setTpMr, mPhoneId);
+                }
+            } else {
+                Log.e(TAG, "Give the failed callback as need retry to send the sms: " + sms);
+                onSendSmsError(sms, ImsSmsImplBase.SEND_STATUS_ERROR_FALLBACK);
+            }
+        }
+
+        private void onGetTpMrError(Sms sms) {
+            onSendSmsError(sms, ImsSmsImplBase.SEND_STATUS_ERROR_FALLBACK);
+        }
+
+        private void onSendSmsError(Sms sms, int status) {
+            if (sms == null) return;
+
+            Log.e(TAG, "Error to send the sms: " + sms);
+                // Handle it as send SMS failed and try to fallback.
+            onSendSmsResult(
+                    sms._token, sms._messageRef, status, SmsManager.RESULT_ERROR_GENERIC_FAILURE);
+        }
+
+        private boolean sendSmsInternal(Sms sms) {
+            try {
+                // FIXME: As normal, it should use IccUtils.bytesToHexString, and the smsc number
+                // could get as this:
+                // byte[] smscByte = IccUtils.hexStringToBytes(smsc);
+                // int length = smscByte[0];
+                // String numberSMSC = PhoneNumberUtils.calledPartyBCDToString(smscByte, 1, length);
+
+                // But the smsc string will be create as "new String(smsc)" by
+                // {@link ImsSmsDispatcher}, so we'd like to get the smsc from SmsManagerEx now.
+                int subId = Utilities.getSubId(mPhoneId);
+                String numberSMSC = SmsManagerEx.getDefault().getSmscForSubscriber(subId);
+                int id = mISms.sendSms(sms._token, sms._messageRef,
+                        0 /* Retry will be handled by framework, native needn't retry. */,
+                        numberSMSC, IccUtils.bytesToHexString(sms._pdu));
+                if (id != Result.INVALID_ID) {
+                    Log.d(TAG, "Sent the sms, smsc: " + numberSMSC + ", Tp-Mr: " + sms._messageRef
+                            + ", requireStatusReport: " + sms._requireStatusReport);
+                    sms._id = id;
+                    mSmsList.add(sms);
+                    return true;
+                }
+            } catch (RemoteException ex) {
+                Log.e(TAG, "Failed to send the sms as catch the ex: " + ex);
+            }
+
+            return false;
         }
     }
 
@@ -383,20 +478,20 @@ public class VoWifiSmsManager extends ServiceManager {
         public int _status;
         public int _dir;
         public int _id;
+        public byte[] _pdu;
         public boolean _requireStatusReport;
 
         public Sms(int token) {
             _token = token;
         }
 
-        public Sms(int token, int messageRef, int dir, int status, int id,
-                boolean requireStatusReport) {
+        public Sms(int token, int messageRef, int dir, int status, byte[] pdu) {
             _token = token;
             _messageRef = messageRef;
             _status = status;
             _dir = dir;
-            _id = id;
-            _requireStatusReport = requireStatusReport;
+            _pdu = pdu;
+            _requireStatusReport = (pdu[0] & Sms.INDICATOR_STATUS_REPORT_REQUEST) > 0;
         }
 
         @Override
