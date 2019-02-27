@@ -857,7 +857,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
     private void registerSuccess(int stateCode) {
         // When register success, sync the UT items.
-        if (mUtSyncMgr != null) mUtSyncMgr.sync();
+        if (mUtSyncMgr != null) mUtSyncMgr.sync(mSubId);
         // When register success, initialize the queried state.
         if (mUTMgr != null) mUTMgr.initState(mPhoneId);
 
