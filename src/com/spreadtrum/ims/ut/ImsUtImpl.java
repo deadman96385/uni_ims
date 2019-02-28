@@ -1067,12 +1067,37 @@ public class ImsUtImpl extends IImsUt.Stub {
         return id;
     }
 
+    //Unisoc add for bug1015365
+    private boolean forceSSLocalOps(int action) {
+        boolean forceSSLocalOps = false;
+
+        if (action == ACTION_QUERY_CW || action == ACTION_QUERY_CLIR ||
+                action == ACTION_UPDATE_CW || action == ACTION_UPDATE_CLIR ||
+                action == ACTION_GET_CLIR_STATUS || action == ACTION_GET_CW_STATUS_FOR_VOWIFI) {
+
+            CarrierConfigManager carrierConfig = (CarrierConfigManager) mContext.getSystemService(
+                    Context.CARRIER_CONFIG_SERVICE);
+            if (carrierConfig != null) {
+                PersistableBundle config = carrierConfig.getConfigForPhoneId(mPhone.getPhoneId());
+                if (config != null) {
+                    if (!config.getBoolean(CarrierConfigManagerEx.KEY_CARRIER_REQUEST_XCAP_PDN_FOR_CW_CLIR, true)) {
+                        forceSSLocalOps = true;
+                        Log.d(TAG, "forceSSLocalOps = " + forceSSLocalOps);
+                    }
+                }
+            }
+        }
+        return forceSSLocalOps;
+    }
+
     private void requestNetwork(Bundle bundle) {
         Message request = mHandler.obtainMessage(EVENT_REQUEST_NETWORK_DONE);
         boolean isUtEnabled = isUtEnabled();
         bundle.putBoolean(EXTRA_UT_ENABLE, isUtEnabled);
         request.setData(bundle);
-        if (!isUtEnabled) {
+
+        //UNISOC: add for bug1015365
+        if (!isUtEnabled || forceSSLocalOps(bundle.getInt(EXTRA_ACTION, -1))) {
             mHandler.sendMessage(request);
             return;
         }
