@@ -77,7 +77,7 @@ public class VideoCallCameraManager {
     private Context mContext;//SPRD:Add for bug571839
     /* SPRD: bug729242 @{ */
     private WindowManager mWinMana;
-    private int mScreenRotation = 0;
+    private int mScreenRotation = 1;
     /*@}*/
     private int mOrientationSetting = ORIENTATION_SETTING_ON; //SPRD: bug846042
 
@@ -114,12 +114,12 @@ public class VideoCallCameraManager {
         mContext = context;//SPRD:Add for bug571839
         mWinMana = ((WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE));//SPRD: bug729242
         //SPRD: add for bug846042
-        if(mContext != null) {
+       /* if(mContext != null) {
             mOrientationSetting = Settings.System.getInt(mContext.getContentResolver(),
                     Settings.System.ACCELEROMETER_ROTATION, 0);
             mOrientationSettingListener = new RotationObserver(mHandler);
             mOrientationSettingListener.startObserver();
-        }
+        }*/
 
     }
 
@@ -372,7 +372,7 @@ public class VideoCallCameraManager {
     public void releaseVideoCamera() {
         // SPRD: remove camera orientationListener for bug 427421
         mOrientationListener.disable();
-        mOrientationSettingListener.stopObserver();  //SPRD: bug846042
+        //mOrientationSettingListener.stopObserver();  //SPRD: bug846042
         /* SPRD: modify for bug 546928 @ { */
         if (mOperateCameraThread != null) {
             try {
