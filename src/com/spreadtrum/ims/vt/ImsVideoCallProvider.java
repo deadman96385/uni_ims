@@ -367,7 +367,8 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
                     msg.what = EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT;
                     msg.obj = mCi;
                     mVTHandler.removeMessages(EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT);
-                    mVTHandler.sendMessageDelayed(msg, 20000);
+                    //UNISOC: add for Bug 1018073
+                    mVTHandler.sendMessageDelayed(msg, 40000);
                 }
             }
         }
