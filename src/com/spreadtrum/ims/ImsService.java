@@ -49,6 +49,7 @@ import com.android.internal.telephony.Call;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import com.android.internal.telephony.TelephonyIntents;
+import com.android.internal.telephony.IccCardConstants;
 import android.telephony.PhoneNumberUtils;
 
 
@@ -1306,6 +1307,7 @@ public class ImsService extends Service {
         //SPRD: add for bug825528
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(TelephonyIntents.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED);
+        intentFilter.addAction(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
         intentFilter.setPriority(Integer.MAX_VALUE);
         this.registerReceiver(mReceiver, intentFilter);
     }
@@ -3509,6 +3511,18 @@ public class ImsService extends Service {
             if ((TelephonyIntents.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED).equals(action)) {
                 Log.i(TAG,"ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, update Ims Feature For Data Change." );
                 updateImsFeatureForDataChange(); //UNISOC: add for bug866765,bug880865
+            } else if ((TelephonyIntents.ACTION_SIM_STATE_CHANGED).equals(action)) {
+                //Unisoc: add for bug1016166
+                String stateExtra = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
+                if (IccCardConstants.INTENT_VALUE_ICC_ABSENT.equals(stateExtra)) {
+                    int phoneId = intent.getIntExtra(PhoneConstants.PHONE_KEY,
+                            SubscriptionManager.INVALID_PHONE_INDEX);
+                    Log.d(TAG,"ACTION_SIM_STATE_CHANGED, sim card absent.phoneid = "+ phoneId );
+                    ImsServiceImpl imsService = mImsServiceImplMap.get(Integer.valueOf(phoneId + 1));
+                    if (imsService != null) {
+                        imsService.temporarilyDisableUt(false);
+                    }
+                }
             }
         }
     };
