@@ -43,6 +43,7 @@ public class VideoCallEngine {
     public static final int VCE_EVENT_STOP_DEC           = 1005;
     public static final int VCE_EVENT_SHUTDOWN           = 1006;
     public static final int VCE_EVENT_REMOTE_ROTATE_CHANGE           = 1011;
+    public static final int VC_EVENT_LOCAL_RESOLUTION_CHANGED        = 1010; //Unisoc: add for bug1016664
     /* Do not change these values without updating their counterparts
      * in include/media/mediaphone.h
      */
@@ -230,7 +231,7 @@ public class VideoCallEngine {
             Log.d(TAG, "handleMessage " + msg);
 
             AsyncResult ar = null;;
-            if (msg.what != VCE_EVENT_REMOTE_ROTATE_CHANGE){
+            if (msg.what != VCE_EVENT_REMOTE_ROTATE_CHANGE && msg.what != VC_EVENT_LOCAL_RESOLUTION_CHANGED){
                 ar = (AsyncResult) msg.obj;
              }
             switch(msg.what) {
@@ -278,10 +279,21 @@ public class VideoCallEngine {
                         if(VTManagerProxy.getInstance() != null){
                             VTManagerProxy.getInstance().setPeerDimensions(width, height);
                         }
-                        log("VCE_EVENT_REMOTE_ROTATE_CHANGE, width = " + width + "height = " + height);
+                        log("VCE_EVENT_REMOTE_ROTATE_CHANGE, width = " + width + " height = " + height);
                     }
                     return;
                 }
+                case VC_EVENT_LOCAL_RESOLUTION_CHANGED:  //Unisoc: add for bug1016664
+                    if(msg.obj != null) {
+                        Parcel data = (Parcel) msg.obj;
+                        int width = data.readInt();
+                        int height = data.readInt();
+                        if (VTManagerProxy.getInstance() != null) {
+                            VTManagerProxy.getInstance().setPreviewSize(width, height);
+                        }
+                        log("VC_EVENT_LOCAL_RESOLUTION_CHANGED, width = " + width + " height = " + height);
+                    }
+                    return;
                 default:
                     Log.e(TAG, "Unknown message type " + msg.what);
                     return;
