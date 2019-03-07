@@ -1486,7 +1486,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             }
             if(getImsVideoCallProvider() != null){
                 VideoProfile  profile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL,quality);
-                getImsVideoCallProvider().updateVideoQuality(profile);
+                //getImsVideoCallProvider().updateVideoQuality(profile); //Unisoc: change for bug1016664
             }
             Log.w(TAG,"vdc.mediaDescription: " + vdc.mediaDescription + " quality:"+quality);
         }
