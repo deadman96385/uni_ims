@@ -23,4 +23,11 @@
 <string name="vowifi_conf_none_participant">"Walang sinumang kalahok, tapusin ang tawag"</string>
 <string name="vowifi_conf_do_not_support">"Hindi sinusuportahan ang pagkilos na ito ngayon"</string>
 <string name="vowifi_conf_can_not_invite_more">"Hindi maaaring mag-imbita ng isa pang kalahok sa conference dahil may 6 na kalahok na ito"</string>
+    <string name="vowifi_request_update_failed">"Malayuang tanggihan ang kahilingan"</string>
+     <string name="vowifi_request_update_success">"Malayuang tanggapin ang kahilingan"</string>
+     <string name="vowifi_update_to_rx_success">"Reception ng video lang"</string>
+     <string name="vowifi_update_to_tx_success">"Transmission ng video lang"</string>
+     <string name="vowifi_hold_received">"Tawag ay pinigilan"</string>
+     <string name="vowifi_resume_received">"Tawag na nabawi"</string>
+
 </resources>

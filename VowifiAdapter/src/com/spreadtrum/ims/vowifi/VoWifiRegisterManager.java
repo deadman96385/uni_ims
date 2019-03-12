@@ -7,8 +7,10 @@ import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.android.ims.internal.IImsServiceEx;
 import com.android.ims.internal.IVoWifiRegister;
 import com.android.ims.internal.IVoWifiRegisterCallback;
+import com.android.ims.internal.ImsManagerEx;
 
 import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
@@ -47,11 +49,15 @@ public class VoWifiRegisterManager extends ServiceManager {
     // TODO: handle the retry-after later.
     private static final int HANDLE_RETRY_AFTER_MILLIS = 0 /* 5 * 60 * 1000 */;
 
+    // TODO: Request CNI timeout, handle the register go on or failed?
+    private static final int REQUEST_CNI_TIMEOUT_MILLIS = 15 * 1000;
+
     private static final int MSG_ACTION_LOGIN = 1;
     private static final int MSG_ACTION_DE_REGISTER = 2;
     private static final int MSG_ACTION_RE_REGISTER = 3;
     private static final int MSG_ACTION_FORCE_STOP = 4;
     private static final int MSG_ACTION_PREPARE_FOR_LOGIN = 5;
+    private static final int MSG_ACTION_REQUEST_CNI_TIMEOUT = 6;
 
     private RegisterRequest mRequest = null;
     private IVoWifiRegister mIRegister = null;
@@ -96,6 +102,25 @@ public class VoWifiRegisterManager extends ServiceManager {
     }
 
     @Override
+    protected boolean handleNormalMessage(Message msg) {
+        if (msg != null && msg.what == MSG_ACTION_REQUEST_CNI_TIMEOUT) {
+            // Handle request CNI timeout as go-on.
+            if (mRequest != null) {
+                Log.w(TAG, "Do not get the CNI info now, handle as go-on register process.");
+                mRequest.mWaitForCNIResponse = false;
+                mRequest.mNeedANI = false;
+                mRequest.mNeedCNI = false;
+                if (mRequest.mListener != null) {
+                    mRequest.mListener.onPrepareFinished(true, false);
+                }
+            }
+            return true;
+        }
+
+        return super.handleNormalMessage(msg);
+    }
+
+    @Override
     protected boolean handlePendingAction(Message msg) {
         if (Utilities.DEBUG) Log.i(TAG, "Handle the pending action, msg: " + msg);
 
@@ -136,7 +161,9 @@ public class VoWifiRegisterManager extends ServiceManager {
     public void prepareForLogin(int subId, boolean isSupportSRVCC, RegisterConfig config,
             RegisterListener listener) {
         synchronized (TAG) {
-            if (Utilities.DEBUG) Log.i(TAG, "Prepare the info before login, subId: " + subId);
+            if (Utilities.DEBUG) {
+                Log.i(TAG, "Prepare before login, subId: " + subId + ", config: " + config);
+            }
             if (subId < 0 || mIRegister == null) {
                 Log.e(TAG, "Can not get the account info as sub id[" + subId
                         + "] or mIRegister is null.");
@@ -158,10 +185,17 @@ public class VoWifiRegisterManager extends ServiceManager {
                 // Prepare for login, need open account, start client and update settings.
                 if (cliOpen(subId) && cliStart() && cliUpdateSettings(isSupportSRVCC)) {
                     mRequest = new RegisterRequest(subId, config, listener);
-                    mRequest.mNeedPANI = VoWifiConfiguration.isRegRequestPANI(mContext);
-                    if (mRequest.mNeedPANI) {
+                    if (Utilities.isAirplaneModeOff(mContext)) {
+                        mRequest.mNeedANI = VoWifiConfiguration.isRegRequestPANI(mContext);
+                        mRequest.mNeedCNI = VoWifiConfiguration.isRegRequestCNI(mContext);
+                    }
+
+                    if (mRequest.mNeedANI || mRequest.mNeedCNI) {
                         // Need notify as prepare finished after update the access net info.
-                        requestAccessNetInfo();
+                        requestCellularNetInfo();
+                        mRequest.mWaitForCNIResponse = true;
+                        mHandler.sendEmptyMessageDelayed(
+                                MSG_ACTION_REQUEST_CNI_TIMEOUT, REQUEST_CNI_TIMEOUT_MILLIS);
                     } else {
                         listener.onPrepareFinished(true, false);
                     }
@@ -209,32 +243,33 @@ public class VoWifiRegisterManager extends ServiceManager {
                 return;
             }
 
-            if (isRelogin || !mRequest.mNeedPANI || mRequest.mNetInfo != null) {
-                try {
-                    updateRegisterState(RegisterState.STATE_PROGRESSING);
-                    int type = VowifiNetworkType.IEEE_802_11;
-                    String info = "";
-                    if (mRequest.mNeedPANI && mRequest.mNetInfo != null) {
-                        type = mRequest.mNetInfo._type;
-                        info = mRequest.mNetInfo._info;
-                    }
-
-                    int res = mIRegister.cliLogin(
-                            forSos, isIPv4, localIP, pcscfIP, dnsSerIP, type, info, isRelogin);
-                    if (res == Result.FAIL) {
-                        Log.e(TAG, "Login to the ims service failed, Please check!");
-                        updateRegisterState(RegisterState.STATE_IDLE);
-                        // Register failed, give the callback.
-                        if (mRequest.mListener != null) {
-                            mRequest.mListener.onLoginFinished(false, 0, 0);
-                        }
-                    }
-                } catch (RemoteException e) {
-                    Log.e(TAG, "Catch the remote exception when login, e: " + e);
-                    updateRegisterState(RegisterState.STATE_IDLE);
-                    // After the state update finished, set the request to null.
-                    mRequest = null;
+            try {
+                updateRegisterState(RegisterState.STATE_PROGRESSING);
+                int type = VowifiNetworkType.IEEE_802_11;
+                String info = "";
+                int age = -1;
+                if (mRequest.mNetInfo != null
+                        && (mRequest.mNeedANI || mRequest.mNeedCNI) ) {
+                    type = mRequest.mNetInfo._type;
+                    info = mRequest.mNetInfo._info;
+                    age = mRequest.mNetInfo._age;
                 }
+
+                int res = mIRegister.cliLogin(
+                        forSos, isIPv4, localIP, pcscfIP, dnsSerIP, type, info, age, isRelogin);
+                if (res == Result.FAIL) {
+                    Log.e(TAG, "Login to the ims service failed, Please check!");
+                    updateRegisterState(RegisterState.STATE_IDLE);
+                    // Register failed, give the callback.
+                    if (mRequest.mListener != null) {
+                        mRequest.mListener.onLoginFinished(false, 0, 0);
+                    }
+                }
+            } catch (RemoteException e) {
+                Log.e(TAG, "Catch the remote exception when login, e: " + e);
+                updateRegisterState(RegisterState.STATE_IDLE);
+                // After the state update finished, set the request to null.
+                mRequest = null;
             }
         }
     }
@@ -347,11 +382,16 @@ public class VoWifiRegisterManager extends ServiceManager {
         return mRequest == null ? null : mRequest.mRegisterConfig;
     }
 
-    public void updateAccessNetInfo(int type, String info) {
-        Log.d(TAG, "As needPreAccessNetInfo[" + mRequest.mNeedPANI
-                + "] update the type as: " + type + ", info as: " + info);
-        if (mRequest != null && mRequest.mNeedPANI) {
-            mRequest.mNetInfo = new AccessNetInfo(type, info);
+    public void updateAccessNetInfo(int type, String info, int age) {
+        Log.d(TAG, "As needPreAccessNetInfo[" + mRequest.mNeedANI
+                + "] update the type as: " + type + ", info as: " + info + ", age as: " + age);
+        if (mRequest != null
+                && mRequest.mWaitForCNIResponse
+                && (mRequest.mNeedANI || mRequest.mNeedCNI)) {
+            mHandler.removeMessages(MSG_ACTION_REQUEST_CNI_TIMEOUT);
+
+            mRequest.mWaitForCNIResponse = false;
+            mRequest.mNetInfo = new AccessNetInfo(type, info, age);
             if (mRequest.mListener != null) {
                 mRequest.mListener.onPrepareFinished(true, false);
             }
@@ -406,8 +446,7 @@ public class VoWifiRegisterManager extends ServiceManager {
         }
     }
 
-    private void requestAccessNetInfo() {
-        /*
+    private void requestCellularNetInfo() {
         // New a thread to request the access net info.
         new Thread(new Runnable() {
             @Override
@@ -416,7 +455,7 @@ public class VoWifiRegisterManager extends ServiceManager {
                 if (imsServiceEx != null) {
                     try {
                         Log.d(TAG, "Get the access net info.");
-                        imsServiceEx.getImsPaniInfor();
+                        imsServiceEx.getImsCNIInfor();
                     } catch (RemoteException e) {
                         Log.e(TAG, "Failed to get the access net info as exception: " + e);
                     }
@@ -425,14 +464,15 @@ public class VoWifiRegisterManager extends ServiceManager {
                 }
             }
         }).start();
-        */
     }
 
     private class RegisterRequest {
         public int mSubId;
         public int mState;
         public boolean mIsSOS;
-        public boolean mNeedPANI = false;
+        public boolean mNeedANI = false;
+        public boolean mNeedCNI = false;
+        public boolean mWaitForCNIResponse = false;
         public AccessNetInfo mNetInfo = null;
         public RegisterConfig mRegisterConfig;
         public RegisterListener mListener;
@@ -533,10 +573,16 @@ public class VoWifiRegisterManager extends ServiceManager {
     private class AccessNetInfo {
         public int _type;
         public String _info;
+        public int _age;
 
         public AccessNetInfo(int eNodeType, String info) {
+            this(eNodeType, info, -1);
+        }
+
+        public AccessNetInfo(int eNodeType, String info, int age) {
             _type = getVowifiNetworkType(eNodeType);
             _info = info;
+            _age = age;
         }
 
         private int getVowifiNetworkType(int volteType) {

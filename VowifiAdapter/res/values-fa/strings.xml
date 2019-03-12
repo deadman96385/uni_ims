@@ -23,4 +23,11 @@
 <string name="vowifi_conf_none_participant">"هیچ شرکت‌کننده‌ای وجود ندارد، به تماس خاتمه بدهید"</string>
 <string name="vowifi_conf_do_not_support">"در حال حاضر از این اقدام پشتیبانی نمی‌شود"</string>
 <string name="vowifi_conf_can_not_invite_more">"نمی‌توان یک شرکت‌کننده دیگر را به کنفرانس دعوت کرد، زیرا در حال حاضر ۶ شرکت‌کننده وجود دارد"</string>
+    <string name="vowifi_request_update_failed">"درخواست رد از راه دور"</string>
+     <string name="vowifi_request_update_success">"درخواست پذیرش از راه دور"</string>
+     <string name="vowifi_update_to_rx_success">"فقط دریافت ویدئو"</string>
+     <string name="vowifi_update_to_tx_success">"فقط ارسال ویدئو"</string>
+     <string name="vowifi_hold_received">"تماس نگه داشته شد"</string>
+     <string name="vowifi_resume_received">"تماس بازیابی شد"</string>
+
 </resources>

@@ -92,12 +92,46 @@ public class VoWifiConfiguration {
             Uri.parse(ProviderUtils.CONTENT_URI + "/" + ProviderUtils.FUN_REGISTER);
     private static final Uri URI_CALL =
             Uri.parse(ProviderUtils.CONTENT_URI + "/" + ProviderUtils.FUN_CALL);
+    private static final Uri URI_MESSAGE =
+            Uri.parse(ProviderUtils.CONTENT_URI + "/" + ProviderUtils.FUN_MESSAGE);
 
     public static boolean isRegRequestPANI(Context context) {
         Cursor cursor = context.getContentResolver().query(URI_REG, null, null, null, null);
         try {
             if (cursor != null && cursor.moveToFirst()) {
                 int index = cursor.getColumnIndexOrThrow("withPANI");
+                return cursor.getInt(index) == 1 ? true : false;
+            }
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return false;
+    }
+
+    public static boolean isRegRequestCNI(Context context) {
+        Cursor cursor = context.getContentResolver().query(URI_REG, null, null, null, null);
+        try {
+            if (cursor != null && cursor.moveToFirst()) {
+                int index = cursor.getColumnIndexOrThrow("withCNI");
+                return cursor.getInt(index) == 1 ? true : false;
+            }
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return false;
+    }
+
+    public static boolean isSupportSMS(Context context) {
+        Cursor cursor = context.getContentResolver().query(URI_MESSAGE, null, null, null, null);
+        try {
+            if (cursor != null && cursor.moveToFirst()) {
+                int index = cursor.getColumnIndexOrThrow("smsSupport");
                 return cursor.getInt(index) == 1 ? true : false;
             }
         } finally {

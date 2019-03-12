@@ -20,4 +20,7 @@
 <string name="vowifi_conf_none_participant">"Kein Teilnehmer vorhanden, Anruf beenden"</string>
 <string name="vowifi_conf_do_not_support">"Unterstützen Sie diese Aktion jetzt nicht"</string>
 <string name="vowifi_conf_can_not_invite_more">"Ein weitere Teilnehmer kann nicht zur Konferenz eingeladen werden, da sie bereits 6 Teilnehmer umfasst"</string>
+    <string name="vowifi_hold_received">"Anruf gehalten"</string>
+     <string name="vowifi_resume_received">"Anruf wiederhergestellt"</string>
+
 </resources>

@@ -96,6 +96,7 @@ public class VoWifiCallManager extends ServiceManager {
     private static final int MSG_INVITE_CALL = 1;
     private static final int MSG_RELEASE_CALL = 2;
     private static final int MSG_AUTO_ANSWER = 3;
+    private static final int MSG_RETRY_TERMINATE_CALL = 4;
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -121,6 +122,14 @@ public class VoWifiCallManager extends ServiceManager {
                     break;
                 case MSG_AUTO_ANSWER:
                     answerCall((ImsCallSessionImpl) msg.obj);
+                    break;
+                case MSG_RETRY_TERMINATE_CALL:
+                    try {
+                        handleCallTermed((ImsCallSessionImpl) msg.obj, msg.arg1);
+                    } catch (RemoteException ex) {
+                        Log.e(TAG, "Failed to handle the call term when retry as ex: "
+                                + ex.toString());
+                    }
                     break;
             }
         }
@@ -347,6 +356,10 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
+    public int getCallRatType() {
+        return mCurRatType;
+    }
+
     public void resetCallRatType() {
         mCurRatType = ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN;
     }
@@ -355,8 +368,10 @@ public class VoWifiCallManager extends ServiceManager {
         if (Utilities.DEBUG) Log.i(TAG, "Try to update all the calls' type to: " + type);
 
         mCurRatType = type;
-        for (ImsCallSessionImpl callSession : mSessionList) {
-            callSession.updateCallRatType(type);
+        synchronized (mSessionList) {
+            for (ImsCallSessionImpl callSession : mSessionList) {
+                callSession.updateCallRatType(type);
+            }
         }
     }
 
@@ -506,7 +521,9 @@ public class VoWifiCallManager extends ServiceManager {
     }
 
     public void removeCall(ImsCallSessionImpl callSession) {
-        removeCall(callSession, true);
+        synchronized (mSessionList) {
+            removeCall(callSession, true);
+        }
     }
 
     public void removeCall(ImsCallSessionImpl callSession, boolean needNotify) {
@@ -694,13 +711,15 @@ public class VoWifiCallManager extends ServiceManager {
     private ImsCallSessionImpl createCallSession(ImsCallProfile profile,
             IImsCallSessionListener listener, ImsVideoCallProviderImpl videoCallProvider,
             int callDir) {
-        ImsCallSessionImpl session = new ImsCallSessionImpl(mContext, this, profile, listener,
-                videoCallProvider, callDir, mCurRatType);
+        synchronized (mSessionList) {
+            ImsCallSessionImpl session = new ImsCallSessionImpl(mContext, this, profile, listener,
+                    videoCallProvider, callDir, mCurRatType);
 
-        // Add this call session to the list.
-        addCall(session);
+            // Add this call session to the list.
+            addCall(session);
 
-        return session;
+            return session;
+        }
     }
 
     private void inviteCall(ImsCallSessionImpl confSession) {
@@ -984,6 +1003,11 @@ public class VoWifiCallManager extends ServiceManager {
                     handleVoiceCodecNegociated(callSession, codecName);
                     break;
                 }
+                case JSONUtils.EVENT_CODE_CALL_IS_FORWARDED: {
+                    Toast.makeText(mContext, R.string.vowifi_call_forwarded, Toast.LENGTH_LONG)
+                            .show();
+                    break;
+                }
                 default:
                     Log.w(TAG, "The event '" + eventName + "' do not handle, please check!");
             }
@@ -1163,6 +1187,13 @@ public class VoWifiCallManager extends ServiceManager {
                     listener.callSessionTerminated(info);
                 }
             }
+        } else if (!callSession.getCallStateTracker().isMOCall()) {
+            // The call is MT call, but listener is null. It means the call do not attach
+            // session now. We'd like to handle the terminate after 500ms.
+            mHandler.sendMessageDelayed(mHandler.obtainMessage(MSG_RETRY_TERMINATE_CALL,
+                    termReasonCode, -1, callSession), 500);
+            Log.d(TAG, "The incoming call do not attach now, handle the terminate event later.");
+            return;
         }
 
         // After give the callback, close this call session as it is a participant
@@ -1465,17 +1496,17 @@ public class VoWifiCallManager extends ServiceManager {
         if (listener != null) {
             if (callSession.isEmergencyCall()) {
                 ImsReasonInfo info = new ImsReasonInfo(ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE,
-                    ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE, reason);
+                        ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE, reason);
                 listener.callSessionInitiatedFailed(info);
             } else {
                 // Receive 380 from service for a normal call
                 Log.d(TAG, "Start a normal call, but get 380 from service, urnUri: " + urnUri);
                 ImsReasonInfo info = null;
-                String category = EMUtils.getEmergencyCallCategory(urnUri);
-                if (category != null) {
+                int category = EMUtils.getEmergencyCallCategory(urnUri);
+                if (category >= 0) {
                     // Need to retry as an emergency call by cellular.
                     info = new ImsReasonInfo(CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED,
-                            ImsReasonInfo.EXTRA_CODE_CALL_RETRY_NORMAL, category);
+                            ImsReasonInfo.EXTRA_CODE_CALL_RETRY_NORMAL, String.valueOf(category));
                 } else {
                     // Need to retry as an normal call by cellular
                     info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED,

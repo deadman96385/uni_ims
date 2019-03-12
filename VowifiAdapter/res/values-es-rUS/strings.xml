@@ -8,11 +8,14 @@
 
     <string name="vowifi_hold_success">"Retención exitosa"</string>
     <string name="vowifi_hold_fail">"Retención fallida"</string>
-    <string name="vowifi_resume_success">"Reanudado con éxito"</string>
+    <string name="vowifi_resume_success">"Llamada recuperada"</string>
     <string name="vowifi_resume_fail">"No se pudo reanudar"</string>
+    <string name="vowifi_hold_received">"Llamada en espera"</string>
+    <string name="vowifi_resume_received">"Llamada recuperada"</string>
+    <string name="vowifi_call_forwarded">"Llamada desviada"</string>
 
     <string name="vowifi_call_retry">"Por favor, vuelva a intentarlo después de un momento"</string>
-    <string name="vowifi_call_is_focus">"Añadir a conferencia"</string>
+    <string name="vowifi_call_is_focus">"Conferencia"</string>
     <string name="vowifi_conf_connect_timeout">"Conectar al tiempo de espera del servidor de conferencia."</string>
     <string name="vowifi_conf_disconnect">"Error al establecer la conferencia"</string>
     <string name="vowifi_conf_finished">"Conferencia terminada"</string>

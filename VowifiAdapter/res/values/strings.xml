@@ -12,6 +12,7 @@
     <string name="vowifi_resume_fail">Resume fail</string>
     <string name="vowifi_hold_received">Call held</string>
     <string name="vowifi_resume_received">Call retrieved</string>
+    <string name="vowifi_call_forwarded">Call forwarded</string>
 
     <string name="vowifi_call_retry">Please retry after a moment</string>
     <string name="vowifi_call_is_focus">Add to conference</string>

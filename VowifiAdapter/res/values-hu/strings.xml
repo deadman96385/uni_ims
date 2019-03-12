@@ -20,4 +20,7 @@
 <string name="vowifi_conf_none_participant">"Nincs egy résztvevő sem, hívás befejezése"</string>
 <string name="vowifi_conf_do_not_support">"Ez a művelet nem támogatott"</string>
 <string name="vowifi_conf_can_not_invite_more">"Nem lehet további résztvevőt meghívni a konferenciába, mivel annak már van 6 résztvevője"</string>
+    <string name="vowifi_hold_received">"Hívás tartása"</string>
+     <string name="vowifi_resume_received">"Helyreállított hívás"</string>
+
 </resources>

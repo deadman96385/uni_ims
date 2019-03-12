@@ -1,37 +1,30 @@
 package com.spreadtrum.ims.vowifi;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
-import android.provider.Settings;
 import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import com.android.ims.internal.IImsServiceEx;
 import com.android.ims.internal.ImsManagerEx;
-import com.android.internal.telephony.IccCardConstants;
-import com.android.internal.telephony.PhoneConstants;
-import com.android.internal.telephony.TelephonyIntents;
+
+import java.util.ArrayList;
 
 public class UtSyncManager {
     private static final String TAG = Utilities.getTag(UtSyncManager.class.getSimpleName());
 
     private static UtSyncManager sInstance = null;
 
-    private boolean mSynced = false;
-    private boolean mSyncedWhenAMOff = false;
-
+    private int mCurSubId = -1;
     private Context mContext;
     private MyHandler mHandler;
-    private AirplaneModeReceiver mReceiver = new AirplaneModeReceiver();
+    private ArrayList<SyncState> mPhoneSyncState = null;
 
-    private static final int MSG_SYNC = 0;
     private static final int MSG_SYNC_CW = 1;
     private static final int MSG_SYNC_CLIR = 2;
     private class MyHandler extends Handler {
@@ -43,9 +36,6 @@ public class UtSyncManager {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-                case MSG_SYNC:
-                    sync();
-                    break;
                 case MSG_SYNC_CW:
                     queryCWStatus();
                     break;
@@ -73,24 +63,35 @@ public class UtSyncManager {
         mHandler = new MyHandler(looper);
     }
 
-    public void sync() {
-        boolean isAirplaneModeOff = isAirplaneModeOff();
-        Log.d(TAG, "Try to sync the UT items. mSynced[" + mSynced + "], mSyncedWhenAMOff["
-                + mSyncedWhenAMOff + "], isAirplaneModeOff[" + isAirplaneModeOff + "]");
+    public void sync(int subId) {
+        SyncState state = findSyncState(subId);
+        if (state == null) {
+            Log.e(TAG, "Failed to sync as can't find the matched sync state for the sub: " + subId);
+            return;
+        }
 
-        if (!mSynced
-                || (isAirplaneModeOff && !mSyncedWhenAMOff)) {
+        if (mCurSubId != subId) {
+            // There is only one prop to store the SS CW/CLIR status, so if we will sync
+            // the UT state on the another sub. Need clear the sync state of the old sub.
+            SyncState oldState = findSyncState(mCurSubId);
+            if (oldState != null) oldState.reset();
+
+            mCurSubId = subId;
+        }
+
+        boolean isAirplaneModeOff = Utilities.isAirplaneModeOff(mContext);
+        Log.d(TAG, "Try to sync the UT items for the sub: " + subId + ", synced[" + state._synced
+                + "], syncedWhenAMOff[" + state._syncedWhenAMOff + "], isAirplaneModeOff["
+                + isAirplaneModeOff + "]");
+
+        if (!state._synced
+                || (isAirplaneModeOff && !state._syncedWhenAMOff)) {
             mHandler.sendEmptyMessage(MSG_SYNC_CW);
             mHandler.sendEmptyMessage(MSG_SYNC_CLIR);
 
-            mSynced = true;
+            state._synced = true;
             if (isAirplaneModeOff) {
-                mSyncedWhenAMOff = true;
-            } else {
-                // First sync action, but the airplane mode is on. We'd like to sync when
-                // the airplane mode changed to off.
-                mContext.registerReceiver(
-                        mReceiver, new IntentFilter(Intent.ACTION_AIRPLANE_MODE_CHANGED));
+                state._syncedWhenAMOff = true;
             }
         }
     }
@@ -123,45 +124,42 @@ public class UtSyncManager {
         }
     }
 
-    private boolean isAirplaneModeOff() {
-        return Settings.Global.getInt(mContext.getContentResolver(),
-                Settings.Global.AIRPLANE_MODE_ON, 0) == 0;
-    }
-
-    private class AirplaneModeReceiver extends BroadcastReceiver {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent == null) return;
-
-            Log.d(TAG, "Receive the intent: " + intent.getAction());
-            if (Intent.ACTION_AIRPLANE_MODE_CHANGED.equals(intent.getAction())) {
-                boolean airplaneMode = intent.getBooleanExtra("state", false);
-                if (!airplaneMode) {
-                    // Airplane mode is off, register the radio state changed.
-                    mContext.registerReceiver(mReceiver,
-                            new IntentFilter(TelephonyIntents.ACTION_SIM_STATE_CHANGED));
-                }
-            } else if (TelephonyIntents.ACTION_SIM_STATE_CHANGED.equals(intent.getAction())) {
-                int phoneId = intent.getIntExtra(
-                        PhoneConstants.PHONE_KEY, SubscriptionManager.DEFAULT_PHONE_INDEX);
-                if (!SubscriptionManager.isValidPhoneId(phoneId)
-                        || phoneId != Utilities.getPrimaryCard(mContext)) {
-                    Log.w(TAG, "Do nothing as the phone id is invalid, phoneId: " + phoneId);
-                    return;
-                }
-
-                String simState = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
-                Log.d(TAG, "Get the new sim state[" + simState + "] for the phone: " + phoneId);
-                if (IccCardConstants.INTENT_VALUE_ICC_LOADED.equalsIgnoreCase(simState)) {
-                    // Only start the sync action for primary card ready.
-                    mHandler.sendEmptyMessage(MSG_SYNC);
-
-                    Log.d(TAG, "Will start the sync action as primary card ready.");
-                    mContext.unregisterReceiver(mReceiver);
-                }
+    private SyncState findSyncState(int subId) {
+        if (mPhoneSyncState == null) {
+            // Init the sync state first.
+            mPhoneSyncState = new ArrayList<SyncState>();
+            int phoneCount = new TelephonyManager(mContext).getPhoneCount();
+            for (int i = 0; i < phoneCount; i++) {
+                mPhoneSyncState.add(new SyncState(i));
             }
         }
 
+        if (subId < 0 || mPhoneSyncState.size() < 0) {
+            return null;
+        }
+
+        for (SyncState state : mPhoneSyncState) {
+            if (state._subId == subId) {
+                return state;
+            }
+        }
+
+        return null;
     }
+
+    private class SyncState {
+        public final int _subId;
+        public boolean _synced = false;
+        public boolean _syncedWhenAMOff = false;
+
+        public SyncState(int phoneId) {
+            _subId = Utilities.getSubId(phoneId);
+        }
+
+        public void reset() {
+            _synced = false;
+            _syncedWhenAMOff = false;
+        }
+    }
+
 }

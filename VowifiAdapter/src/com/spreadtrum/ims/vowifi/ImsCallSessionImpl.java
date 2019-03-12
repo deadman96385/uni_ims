@@ -116,9 +116,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final int MSG_START_FAIL     = 12;
     private static final int MSG_MERGE_FAILED   = 13;
     private static final int MSG_SEND_DTMF_FINISHED = 14;
+    private static final int MSG_HOLD_FAILED    = 15;
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
+            Log.d(TAG, "Handle the msg: " + msg.toString());
+
             if (msg.what == MSG_START_FAIL) {
                 String failMessage = (String) msg.obj;
                 Log.e(TAG, failMessage);
@@ -150,6 +153,22 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             } else if (msg.what == MSG_SEND_DTMF_FINISHED) {
                 Message result = (Message) msg.obj;
                 result.sendToTarget();
+                return;
+            } else if (msg.what == MSG_HOLD_FAILED) {
+                String failMessage = (String) msg.obj;
+                Log.e(TAG, failMessage);
+
+                Toast.makeText(mContext, R.string.vowifi_call_retry, Toast.LENGTH_LONG).show();
+                if (mListener != null) {
+                    try {
+                        mListener.callSessionHoldFailed(
+                                new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
+                                        ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
+                    } catch (RemoteException e) {
+                        Log.e(TAG, "Failed to give the call hold failed callback.");
+                        Log.e(TAG, "Catch the RemoteException e: " + e);
+                    }
+                }
                 return;
             }
 
@@ -743,12 +762,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     private void handleHoldActionFailed(String failMessage) throws RemoteException {
-        Log.e(TAG, failMessage);
-        Toast.makeText(mContext, R.string.vowifi_call_retry, Toast.LENGTH_LONG).show();
-        if (mListener != null) {
-            mListener.callSessionHoldFailed(new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
-                    ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
-        }
+        // Similar as handle call start failed, we'd like to delay 500ms to send this callback
+        // as ImsCall need handle the left logic.
+        mHandler.sendMessageDelayed(mHandler.obtainMessage(MSG_HOLD_FAILED, failMessage), 500);
     }
 
     /**
@@ -1067,9 +1083,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     @Override
     public void sendDtmf(char c, Message result) throws RemoteException {
         // TODO: need change
-        Log.i(TAG, "sendDtmf" + c);
+        Log.i(TAG, "sendDtmf: " + c);
         if (mICall != null) {
-            mICall.sessDtmf(mCallId, getDtmfType(c));
+            if (isConferenceCall()) {
+                mICall.confDtmf(mCallId, getDtmfType(c));
+            } else {
+                mICall.sessDtmf(mCallId, getDtmfType(c));
+            }
         }
 
         // Send event finished, send the result to target.
@@ -1089,9 +1109,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     @Override
     public void startDtmf(char c) throws RemoteException {
         // TODO: need change
-        Log.i(TAG, "startDtmf" + c);
+        Log.i(TAG, "startDtmf: " + c);
         if (mICall != null) {
-            mICall.sessDtmf(mCallId, getDtmfType(c));
+            if (isConferenceCall()) {
+                mICall.confDtmf(mCallId, getDtmfType(c));
+            } else {
+                mICall.sessDtmf(mCallId, getDtmfType(c));
+            }
         }
     }
 
@@ -2124,9 +2148,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
         String peerNumber = callee;
         if (mIsEmergency) {
-            peerNumber = EMUtils.getEmergencyCallUrn(
-                    mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
-            Log.d(TAG, "Start an emergency call with peerNumber: " + peerNumber);
+            String category = mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO);
+            if (TextUtils.isEmpty(category)) {
+                peerNumber = EMUtils.getUrnWithPhoneNumber(mContext, callee);
+            } else {
+                peerNumber = EMUtils.getEmergencyCallUrn(category);
+            }
+            Log.d(TAG, "Start an emergency call with urn: " + peerNumber);
         }
         // Start the call.
         int clirMode =

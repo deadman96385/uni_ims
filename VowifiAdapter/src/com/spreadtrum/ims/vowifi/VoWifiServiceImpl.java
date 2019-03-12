@@ -131,7 +131,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     securityForceStop();
                     break;
                 case MSG_ATTACH:
-                    attachInternal((Boolean) msg.obj);
+                    attachInternal((Boolean) msg.obj, mUsedLocalAddr);
                     break;
                 case MSG_DEATTACH:
                     boolean forHandover = (Boolean) msg.obj;
@@ -218,6 +218,10 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
         private void handleMsgReset(int step) {
             Log.d(mTag, "Handle the reset message as step: " + step);
+
+            // Give the callback when the reset action start.
+            if (mCallback != null) mCallback.onResetStarted();
+
             if (mResetStep == RESET_STEP_DEREGISTER) {
                 if (mRegisterMgr.getCurRegisterState() == RegisterState.STATE_CONNECTED) {
                     deregisterInternal();
@@ -269,7 +273,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                         break;
                     }
                 case ECBMRequest.ECBM_STEP_ATTACH_NORMAL:
-                    attachInternal(false /* is not handover */);
+                    attachInternal(false /* is not handover */, "");
                     break;
                 case ECBMRequest.ECBM_STEP_REGISTER_SOS:
                 case ECBMRequest.ECBM_STEP_REGISTER_NORMAL:
@@ -452,7 +456,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         mHandler.sendMessage(mHandler.obtainMessage(MSG_ATTACH, isHandover));
     }
 
-    private void attachInternal(boolean isHandover) {
+    private void attachInternal(boolean isHandover, String localAddr) {
+        Log.d(mTag, "Attach on the version: " + Utilities.Version.getVersionInfo());
+
         // Before start attach process, need get the SIM account info.
         // We will always use the primary card to attach and register now.
         mPhoneId = Utilities.getPrimaryCard(mContext);
@@ -464,7 +470,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         }
 
         int s2bType = mEcbmStep == ECBMRequest.ECBM_STEP_ATTACH_SOS ? S2bType.SOS : S2bType.NORMAL;
-        mSecurityMgr.attach(isHandover, mSubId, s2bType, mUsedLocalAddr, mSecurityListener);
+        mSecurityMgr.attach(isHandover, mSubId, s2bType, localAddr, mSecurityListener);
     }
 
     public void deattach() {
@@ -720,6 +726,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (mCallMgr != null) mCallMgr.onSRVCCStateChanged(state);
     }
 
+    public void notifyImsCNIInfo(int type, String info, int age) {
+        if (mRegisterMgr != null) {
+            mRegisterMgr.updateAccessNetInfo(type, info, age);
+        }
+    }
+
     private void init() {
         if (ImsManager.isWfcEnabledByPlatform(mContext)) {
             mPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
@@ -845,7 +857,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
     private void registerSuccess(int stateCode) {
         // When register success, sync the UT items.
-        if (mUtSyncMgr != null) mUtSyncMgr.sync();
+        if (mUtSyncMgr != null) mUtSyncMgr.sync(mSubId);
         // When register success, initialize the queried state.
         if (mUTMgr != null) mUTMgr.initState(mPhoneId);
 
@@ -1368,6 +1380,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onRegisterStateChanged(int state, int stateCode);
 
         public void onReregisterFinished(boolean isSuccess, int errorCode);
+
+        public void  onResetStarted();
 
         /**
          * release result callback
