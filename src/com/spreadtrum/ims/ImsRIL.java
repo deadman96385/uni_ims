@@ -1936,4 +1936,12 @@ public final class ImsRIL {
             riljLog("callMediaChangeRequestTimeOut, RadioInteractor is null");
         }
     }
+
+    public void getImsCNIInfo(Message response) {
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.getImsPaniInfo(response);
+        } else {
+            riljLog("getImsCNIInfo, RadioInteractor is null");
+        }
+    }
 }
