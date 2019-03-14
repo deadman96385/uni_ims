@@ -267,16 +267,19 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
 
     private Message
     obtainCompleteMessage(int what) {
+        countPendingOperations();
+        return mHandler.obtainMessage(what);
+    }
+
+    public void
+    countPendingOperations() {//UNISOC:add for bug1011305
         mPendingOperations++;
         mLastRelevantPoll = null;
         mNeedsPoll = true;
 
-        if (DBG_POLL) Log.i(TAG,"obtainCompleteMessage: pendingOperations=" +
+        if (DBG_POLL) Log.i(TAG,"countPendingOperations: pendingOperations=" +
                 mPendingOperations + ", needsPoll=" + mNeedsPoll);
-
-        return mHandler.obtainMessage(what);
     }
-
 
     //add for unisoc 973687
     public void removeMessageAfterDial() {
@@ -290,7 +293,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         operationComplete();
     }
     /* @} */
-    private void
+    public void
     operationComplete() {
         mPendingOperations--;
 

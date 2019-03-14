@@ -611,8 +611,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_DIAL error!");
                         mCi.getLastCallFailCause(mHandler.obtainMessage(ACTION_COMPLETE_GET_CALL_FAIL_CAUSE,this));
                     }
-                    //SPRD: add for bug525777
-                    mImsServiceCallTracker.pollCallsAfterOperationComplete();
+                    mImsServiceCallTracker.operationComplete();//UNISOC:add for bug1011305
                     break;
                 case ACTION_COMPLETE_HOLD:
                     if (ar != null && ar.exception != null) {
@@ -631,6 +630,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     } else {
                         mIsLocalHold = false;
                     }
+                    mImsServiceCallTracker.operationComplete();//UNISOC:add for bug1011305
                     break;
                 case ACTION_COMPLETE_RESUME:
                     if (ar != null && ar.exception != null) {
@@ -986,6 +986,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCallee = callee;
         int clir = profile.getCallExtraInt(ImsCallProfile.EXTRA_OIR);
 
+        mImsServiceCallTracker.countPendingOperations();//UNISOC:add for bug1011305
         if(mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT
                 || mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE){
             mCi.dialVP(mCallee,null,0,mHandler.obtainMessage(ACTION_COMPLETE_DIAL,this));
@@ -1028,6 +1029,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             }
         }
         Log.d(TAG, "startConference-> participantList:"+participantList.toString());
+        mImsServiceCallTracker.countPendingOperations();//UNISOC:add for bug1011305
         mCi.requestInitialGroupCall(participantList.toString(),
                 mHandler.obtainMessage(ACTION_COMPLETE_DIAL,this));
     }
@@ -1164,8 +1166,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             }
             return;
         }
-        mCi.switchWaitingOrHoldingAndActive(
-                mHandler.obtainMessage(ACTION_COMPLETE_HOLD,this));
+        mImsServiceCallTracker.countPendingOperations();//UNISOC:add for bug1011305
+        mCi.switchWaitingOrHoldingAndActive(mHandler.obtainMessage(ACTION_COMPLETE_HOLD,this));
     }
 
     /**
