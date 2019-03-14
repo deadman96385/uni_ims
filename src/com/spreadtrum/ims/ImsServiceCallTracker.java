@@ -80,6 +80,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private Map<String, ImsCallSessionImpl> mSessionList = new HashMap<String, ImsCallSessionImpl>();
     private List<ImsCallSessionImpl> mPendingSessionList = new CopyOnWriteArrayList<ImsCallSessionImpl>();
     private List<SessionListListener> mSessionListListeners = new CopyOnWriteArrayList<SessionListListener>();
+    private ArrayList<ImsDriverCall> mImsDcList;//UNISOC:add for bug1035237
     /*SPRD: add for 605475@{*/
     private int mCurrentUserId = UserHandle.USER_OWNER;
     private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
@@ -267,15 +268,21 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
 
     private Message
     obtainCompleteMessage(int what) {
+        countPendingOperations();
+        return mHandler.obtainMessage(what);
+    }
+
+    public void
+    countPendingOperations() {//UNISOC:add for bug1011305
         mPendingOperations++;
         mLastRelevantPoll = null;
         mNeedsPoll = true;
 
-        if (DBG_POLL) Log.i(TAG,"obtainCompleteMessage: pendingOperations=" +
+        if (DBG_POLL) Log.i(TAG,"countPendingOperations: pendingOperations=" +
                 mPendingOperations + ", needsPoll=" + mNeedsPoll);
-
-        return mHandler.obtainMessage(what);
     }
+
+
     /* SPRD: add for bug525777 @{ */
     public void
     pollCallsAfterOperationComplete() {
@@ -284,7 +291,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         operationComplete();
     }
     /* @} */
-    private void
+    public void
     operationComplete() {
         mPendingOperations--;
 
@@ -388,6 +395,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         Map <String, ImsDriverCall> validDriverCall = new HashMap<String, ImsDriverCall>();
         if (ar.exception == null) {
             imsDcList = getImsCallList((java.util.ArrayList<CallVoLTE>) ar.result);
+            mImsDcList = imsDcList;
         } else if (isCommandExceptionRadioNotAvailable(ar.exception)) {
             // just a dummy empty ArrayList to cause the loop
             // to hang up all the calls
@@ -850,26 +858,15 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         return mServiceId;
     }
 
-    //SPRD: add for bug579560
+    //SPRD: add for bug579560 and modify for bug1035237
     public boolean isHasBackgroundCallAndActiveCall(){
-        synchronized(mSessionList){
-            boolean flagActive = false;
-            boolean flagHold = false;
-            for(Iterator<Map.Entry<String, ImsCallSessionImpl>> it = mSessionList.entrySet().iterator(); it.hasNext();){
-                Map.Entry<String, ImsCallSessionImpl> e = it.next();
-
-                if(e.getValue().isBackgroundCall()){
-                    flagHold = true;
-                }else if(e.getValue().isForegroundCall()){
-                    flagActive = true;
-                }
-                if(flagHold == true && flagActive == true){
-                    Log.d(TAG, "updateConferenceState -flagHold = true, flagActive = true");
-                    return true;
-                }
-            }
+        boolean flagActive = false;
+        boolean flagHold = false;
+        for (int i = 0; mImsDcList!= null && i < mImsDcList.size(); i++) {
+            flagActive |= mImsDcList.get(i).state == ImsDriverCall.State.ACTIVE;
+            flagHold |= mImsDcList.get(i).state == ImsDriverCall.State.HOLDING;
         }
-        return false;
+        return flagActive & flagHold;
     }
 
     public boolean hasRingingCall(){
