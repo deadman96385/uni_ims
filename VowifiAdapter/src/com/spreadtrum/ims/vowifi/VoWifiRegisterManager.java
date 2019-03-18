@@ -108,7 +108,7 @@ public class VoWifiRegisterManager extends ServiceManager {
             if (mRequest != null) {
                 Log.w(TAG, "Do not get the CNI info now, handle as go-on register process.");
                 mRequest.mWaitForCNIResponse = false;
-                mRequest.mNeedANI = false;
+                mRequest.mNeedPCNI = false;
                 mRequest.mNeedCNI = false;
                 if (mRequest.mListener != null) {
                     mRequest.mListener.onPrepareFinished(true, false);
@@ -186,11 +186,11 @@ public class VoWifiRegisterManager extends ServiceManager {
                 if (cliOpen(subId) && cliStart() && cliUpdateSettings(isSupportSRVCC)) {
                     mRequest = new RegisterRequest(subId, config, listener);
                     if (Utilities.isAirplaneModeOff(mContext)) {
-                        mRequest.mNeedANI = VoWifiConfiguration.isRegRequestPANI(mContext);
+                        mRequest.mNeedPCNI = VoWifiConfiguration.isRegRequestPCNI(mContext);
                         mRequest.mNeedCNI = VoWifiConfiguration.isRegRequestCNI(mContext);
                     }
 
-                    if (mRequest.mNeedANI || mRequest.mNeedCNI) {
+                    if (mRequest.mNeedPCNI || mRequest.mNeedCNI) {
                         // Need notify as prepare finished after update the access net info.
                         requestCellularNetInfo();
                         mRequest.mWaitForCNIResponse = true;
@@ -249,7 +249,7 @@ public class VoWifiRegisterManager extends ServiceManager {
                 String info = "";
                 int age = -1;
                 if (mRequest.mNetInfo != null
-                        && (mRequest.mNeedANI || mRequest.mNeedCNI) ) {
+                        && (mRequest.mNeedPCNI || mRequest.mNeedCNI) ) {
                     type = mRequest.mNetInfo._type;
                     info = mRequest.mNetInfo._info;
                     age = mRequest.mNetInfo._age;
@@ -280,14 +280,15 @@ public class VoWifiRegisterManager extends ServiceManager {
                 Log.i(TAG, "Try to logout from the ims.");
             }
 
-            if (mRequest == null) {
+            if (mRequest == null
+                    || mRequest.mState == RegisterState.STATE_IDLE
+                    || mRequest.mState == RegisterState.STATE_PROGRESSING) {
+                // If there isn't register request, or the current state is idle or progressing,
+                // we'd like to force stop current process.
+                Log.d(TAG, "Deregister, handle as force stop as the current status is: "
+                        + (mRequest == null ? "null" : mRequest.mState));
                 forceStop(listener);
-            } else if (mRequest.mState == RegisterState.STATE_IDLE) {
-                // The current status is idle or unknown, give the callback immediately.
-                if (mRequest.mListener != null) mRequest.mListener.onLogout(0);
-            } else if (mRequest.mState == RegisterState.STATE_PROGRESSING) {
-                // Already in the register progress, we'd like to cancel current process.
-                forceStop(mRequest.mListener);
+                if (listener != null) listener.onLogout(0);
             } else if (mRequest.mState == RegisterState.STATE_CONNECTED) {
                 // The current register status is true;
                 if (mIRegister != null) {
@@ -301,7 +302,8 @@ public class VoWifiRegisterManager extends ServiceManager {
                         }
                     } catch (RemoteException e) {
                         Log.e(TAG, "Catch the remote exception when unregister, e: " + e);
-                        if (mRequest.mListener != null) mRequest.mListener.onLogout(0);
+                        if (listener != null) listener.onLogout(0);
+
                         updateRegisterState(RegisterState.STATE_IDLE);
                         mRequest = null;
                     }
@@ -382,12 +384,13 @@ public class VoWifiRegisterManager extends ServiceManager {
         return mRequest == null ? null : mRequest.mRegisterConfig;
     }
 
-    public void updateAccessNetInfo(int type, String info, int age) {
-        Log.d(TAG, "As needPreAccessNetInfo[" + mRequest.mNeedANI
-                + "] update the type as: " + type + ", info as: " + info + ", age as: " + age);
+    public void updateCellularNetInfo(int type, String info, int age) {
+        Log.d(TAG, "As needCellularNetInfo[mNeedPCNI: " + mRequest.mNeedPCNI + ", mNeedCNI: "
+                + mRequest.mNeedCNI + "] update the type as: " + type + ", info as: " + info
+                + ", age as: " + age);
         if (mRequest != null
                 && mRequest.mWaitForCNIResponse
-                && (mRequest.mNeedANI || mRequest.mNeedCNI)) {
+                && (mRequest.mNeedPCNI || mRequest.mNeedCNI)) {
             mHandler.removeMessages(MSG_ACTION_REQUEST_CNI_TIMEOUT);
 
             mRequest.mWaitForCNIResponse = false;
@@ -470,7 +473,7 @@ public class VoWifiRegisterManager extends ServiceManager {
         public int mSubId;
         public int mState;
         public boolean mIsSOS;
-        public boolean mNeedANI = false;
+        public boolean mNeedPCNI = false;
         public boolean mNeedCNI = false;
         public boolean mWaitForCNIResponse = false;
         public AccessNetInfo mNetInfo = null;

@@ -2093,20 +2093,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             // Start an emergency call directly.
             startCall(callee);
         } else {
-            if (!mCallManager.isCallFunEnabled()) {
-                // Call function is disabled, it means the normal s2b unavailable.
-                // So we needn't remove the old s2b.
-                needRemoveOldS2b = false;
-            } else {
-                // Check if need remove the old s2b for sos.
-                needRemoveOldS2b = mCursor != null ? mCursor.sosNeedRemoveOldS2b() : true;
-
-                if (!needRemoveOldS2b) {
-                    if (!Utilities.isSupportSOSSingleProcess(mContext)) {
-                        // Do not support sos single process, we'd like to handle
-                        // the emergency call as need remove old s2b.
-                        needRemoveOldS2b = true;
-                    }
+            // Check if need remove the old s2b for sos.
+            needRemoveOldS2b = mCursor != null ? mCursor.sosNeedRemoveOldS2b() : true;
+            Log.d(TAG, "Get the need remove old s2b as: " + needRemoveOldS2b);
+            if (!needRemoveOldS2b) {
+                if (!Utilities.isSupportSOSSingleProcess(mContext)) {
+                    // Do not support sos single process, we'd like to handle
+                    // the emergency call as need remove old s2b.
+                    needRemoveOldS2b = true;
                 }
             }
         }
