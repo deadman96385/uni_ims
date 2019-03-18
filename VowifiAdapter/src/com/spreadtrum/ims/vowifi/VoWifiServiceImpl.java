@@ -88,7 +88,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     protected MyRegisterListener mRegisterListener = new MyRegisterListener();
     protected MySecurityListener mSecurityListener = new MySecurityListener();
 
-    protected static final int ECBM_TIMEOUT = 60 * 1000; // 60s
+    protected static final int ECBM_TIMEOUT = 15 * 1000; // 15s
 
     protected static final int MSG_RESET = 1;
     protected static final int MSG_RESET_FORCE = 2;
@@ -728,7 +728,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
     public void notifyImsCNIInfo(int type, String info, int age) {
         if (mRegisterMgr != null) {
-            mRegisterMgr.updateAccessNetInfo(type, info, age);
+            mRegisterMgr.updateCellularNetInfo(type, info, age);
         }
     }
 
@@ -879,10 +879,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (mEcbmStep != ECBMRequest.ECBM_STEP_INVALID) {
             // Exit the ECBM.
             onSOSError(mEcbmStep);
-            exitECBM();
-
-            // Notify the register as register logout.
-            registerLogout(0);
         } else if (mCallback != null) {
             mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
         }
@@ -1160,21 +1156,22 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onDisconnected() {
             Log.d(mTag, "Register service disconnected, and current register cmd state is: "
                     + mCmdRegisterState);
-            if (mCallback != null && mRegisterMgr != null) {
-                switch (mCmdRegisterState) {
-                    case CMD_STATE_INVALID:
-                        // Do nothing as there isn't any register command.
-                        break;
-                    case CMD_STATE_FINISHED:
-                        mCallback.onUnsolicitedUpdate(UnsolicitedCode.SIP_LOGOUT);
-                        // And same as in progress, need notify the register state change to idle.
-                        // Needn't break here.
-                    case CMD_STATE_PROGRESS:
-                        mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
-                        break;
-                }
-            }
             mCmdRegisterState = CMD_STATE_INVALID;
+
+            if (mCallback == null) return;
+
+            switch (mCmdRegisterState) {
+                case CMD_STATE_INVALID:
+                    // Do nothing as there isn't any register command.
+                    break;
+                case CMD_STATE_FINISHED:
+                    mCallback.onUnsolicitedUpdate(UnsolicitedCode.SIP_LOGOUT);
+                    // And same as in progress, need notify the register state change to idle.
+                    // Needn't break here.
+                case CMD_STATE_PROGRESS:
+                    mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
+                    break;
+            }
         }
 
     }
@@ -1307,21 +1304,22 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onDisconnected() {
             Log.d(mTag, "Security service disconnected, and current attach cmd state is: "
                     + mCmdAttachState);
-            if (mCallback != null && mSecurityMgr != null) {
-                switch (mCmdAttachState) {
-                    case CMD_STATE_INVALID:
-                        // There isn't attach cmd, do nothing.
-                        break;
-                    case CMD_STATE_PROGRESS:
-                        mCallback.onAttachFinished(false, 0);
-                        break;
-                    case CMD_STATE_FINISHED:
-                        mCallback.onAttachStopped(0);
-                        mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
-                        break;
-                }
-            }
             mCmdAttachState = CMD_STATE_INVALID;
+
+            if (mCallback == null) return;
+
+            switch (mCmdAttachState) {
+                case CMD_STATE_INVALID:
+                    // There isn't attach cmd, do nothing.
+                    break;
+                case CMD_STATE_PROGRESS:
+                    mCallback.onAttachFinished(false, 0);
+                    break;
+                case CMD_STATE_FINISHED:
+                    mCallback.onAttachStopped(0);
+                    mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
+                    break;
+            }
         }
     }
 
@@ -1351,8 +1349,11 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             // As sos request error, exit ECBM, and reset all the stack.
             exitECBM();
             resetAll(WifiState.DISCONNECTED);
-            // Notify as register logout.
-            registerLogout(0);
+
+            // Notify as SOS failed.
+            if (mCallback != null) {
+                mCallback.onUnsolicitedUpdate(UnsolicitedCode.SOS_FAILED);
+            }
         }
     }
 

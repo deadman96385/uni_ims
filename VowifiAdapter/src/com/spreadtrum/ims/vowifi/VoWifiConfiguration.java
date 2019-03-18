@@ -95,19 +95,8 @@ public class VoWifiConfiguration {
     private static final Uri URI_MESSAGE =
             Uri.parse(ProviderUtils.CONTENT_URI + "/" + ProviderUtils.FUN_MESSAGE);
 
-    public static boolean isRegRequestPANI(Context context) {
-        Cursor cursor = context.getContentResolver().query(URI_REG, null, null, null, null);
-        try {
-            if (cursor != null && cursor.moveToFirst()) {
-                int index = cursor.getColumnIndexOrThrow("withPANI");
-                return cursor.getInt(index) == 1 ? true : false;
-            }
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
-        }
-
+    public static boolean isRegRequestPCNI(Context context) {
+        // Do not support PCNI now.
         return false;
     }
 
