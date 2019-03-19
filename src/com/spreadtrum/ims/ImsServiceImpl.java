@@ -82,6 +82,7 @@ import com.android.ims.internal.IImsFeatureStatusCallback;
 import com.android.ims.internal.IImsMultiEndpoint;
 import com.android.ims.internal.IImsServiceListenerEx;
 import vendor.sprd.hardware.radio.V1_0.ImsNetworkInfo;
+import vendor.sprd.hardware.radio.V1_0.ImsErrorCauseInfo;
 import com.android.sprd.telephony.CommandException;
 import android.content.ComponentName;
 import android.content.ServiceConnection;
@@ -124,6 +125,9 @@ public class ImsServiceImpl extends MmTelFeature {
     protected static final int EVENT_RADIO_ON                          = 119;
     protected static final int EVENT_IMS_GET_IMS_CNI_INFO              = 122;
 
+    protected static final int EVENT_IMS_ERROR_CAUSE_INFO                 = 123;
+
+
     /* UNISOC: add for bug968317 @{ */
     class VoLTECallAvailSyncStatus {
         public static final int VOLTE_CALL_AVAIL_SYNC_IDLE     = 0;
@@ -131,6 +135,9 @@ public class ImsServiceImpl extends MmTelFeature {
         public static final int VOLTE_CALL_AVAIL_SYNC_FAIL     = 2;
     }
     /*@}*/
+
+    public static final int IMS_ERROR_CAUSE_TYPE_IMSREG = 2;
+    public static final int IMS_ERROR_CAUSE_ERRCODE_REG_FORBIDDED = 403;
 
     private GsmCdmaPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -168,6 +175,9 @@ public class ImsServiceImpl extends MmTelFeature {
     // SPRD: 730973
     private boolean mVolteRegisterStateOld = false;
     private RadioInteractor mRadioInteractor;
+
+    private int mServiceState = ServiceState.STATE_POWER_OFF;
+    public boolean mIsUtDisableByNetWork = false;
 
     /**
      * AndroidP start@{:
@@ -433,6 +443,7 @@ public class ImsServiceImpl extends MmTelFeature {
         mCi.getImsRegAddress(mHandler.obtainMessage(EVENT_IMS_GET_IMS_REG_ADDRESS));//SPRD: add for bug739660
 
         mRadioInteractor = new RadioInteractor(context);//UNISOC:add for bug982110
+        mCi.registerForImsErrorCause(mHandler, EVENT_IMS_ERROR_CAUSE_INFO, null);//UNISOC: add for bug1016116
     }
 
     /**
@@ -522,6 +533,9 @@ public class ImsServiceImpl extends MmTelFeature {
                     TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state",
                             mImsServiceState.mImsRegistered ? "1" :"0");
                     setPreferredNetworkRAT(isImsRegistered());
+                    if(isImsRegistered()){
+                        setUtDisableByNetWork(false);//UNISOC: add by bug1016166
+                    }
                     notifyRegisterStateChange();
                     log("EVENT_IMS_STATE_DONE->mServiceState:" + mImsServiceState.mImsRegistered);
                     break;
@@ -702,6 +716,18 @@ public class ImsServiceImpl extends MmTelFeature {
                     if (VoLTECallAvailSync == VoLTECallAvailSyncStatus.VOLTE_CALL_AVAIL_SYNC_FAIL) {
                         log("EVENT_RADIO_ON -> setVoLTECallAvailablity");
                         setVoLTECallAvailablity();
+                    }
+                    break;
+                case EVENT_IMS_ERROR_CAUSE_INFO:
+                    if (ar != null && ar.exception == null && ar.result != null) {
+                        ImsErrorCauseInfo ImsErrorCauseInfo = (ImsErrorCauseInfo) ar.result;
+                        onImsErrCauseInfoChange(ImsErrorCauseInfo);
+                    } else {
+                        if (ar != null) {
+                            log("EVENT_IMS_REGISTER_SPIMS_REASON: ar.exception" + ar.exception + " ar.result: " + ar.result);
+                        } else {
+                            log("EVENT_IMS_REGISTER_SPIMS_REASON: ar == null");
+                        }
                     }
                     break;
                 /*@}*/
@@ -1600,6 +1626,55 @@ public class ImsServiceImpl extends MmTelFeature {
     public void updateImsFeatureForAllService(){
         mImsService.updateImsFeatureForAllService();
     }
+
+    public void getSpecialRatcap(ServiceState state) {
+
+        if (state != null && mCi != null) {
+            if (mServiceState != state.getState()) {
+                log("getSpecialRatcap: servaiceState: " + state.getState());
+                if (state.getState() == ServiceState.STATE_POWER_OFF) {
+                    setUtDisableByNetWork(false);
+                    log("getSpecialRatcap: mIsUtDisableByNetWork: " + mIsUtDisableByNetWork);
+                }
+            }
+            mServiceState = state.getState();
+        }
+    }
+
+    /*UNISOC: add for bug1016166 @{*/
+    public void setUtDisableByNetWork(boolean value){
+        mIsUtDisableByNetWork = value;
+    }
+
+    public boolean getCarrierCofValueByKey(int phoneId,String key) {
+
+        Log.d(TAG, "getCarrierCofValueByKey phoneId = " + phoneId + " key = " + key);
+        boolean carrierCofValue = false;
+        CarrierConfigManager carrierConfig = (CarrierConfigManager) mContext.getSystemService(
+                Context.CARRIER_CONFIG_SERVICE);
+        if (carrierConfig != null) {
+            PersistableBundle config = carrierConfig.getConfigForPhoneId(phoneId);
+            if (config != null) {
+                carrierCofValue = config.getBoolean(key, false);
+            }
+        }
+        return carrierCofValue;
+    }
+
+    public void onImsErrCauseInfoChange(ImsErrorCauseInfo imsErrorCauseInfo) {
+
+        if (getCarrierCofValueByKey(mPhone.getPhoneId(),
+                CarrierConfigManagerEx.KEY_CARRIER_SUPPORT_DISABLE_UT_BY_NETWORK)) {
+            if (imsErrorCauseInfo.type == IMS_ERROR_CAUSE_TYPE_IMSREG &&
+                    imsErrorCauseInfo.errCode == IMS_ERROR_CAUSE_ERRCODE_REG_FORBIDDED) {
+                setUtDisableByNetWork(true);
+                Log.d(TAG, "onImsCsfbReasonInfoChange = " + mIsUtDisableByNetWork);
+            }
+        }
+        log("onImsCsfbReasonInfoChange: info:" + imsErrorCauseInfo.type + " errCode:"
+                + imsErrorCauseInfo.errCode + " errDescription: " + imsErrorCauseInfo.errDescription);
+    }
+    /*@}*/
 
     public void notifyImsPdnStateChange(int state){
         synchronized (mImsPdnStateListeners) {

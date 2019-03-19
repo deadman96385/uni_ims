@@ -1904,6 +1904,23 @@ public final class ImsRIL {
         }
     }
 
+    /*usnisoc: add for bug1016116@{*/
+    public void registerForImsErrorCause(Handler h, int what, Object obj) {
+        if (getRadioInteractor() != null) {
+            mRadioInteractor.registerForImsErrorCause(h, what, obj);
+        } else {
+            riljLog("registerForImsErrorCause, RadioInteractor is null");
+        }
+    }
+
+    public void unregisterForImsErrorCause(Handler h) {
+        if (getRadioInteractor() != null) {
+            mRadioInteractor.unregisterForImsErrorCause(h);
+        } else {
+            riljLog("unregisterForImsErrorCause, RadioInteractor is null");
+        }
+    }/*@}*/
+
     public void registerForNotAvailable(Handler h, int what, Object obj) {
         mCi.registerForNotAvailable(h,what,obj);
     }
