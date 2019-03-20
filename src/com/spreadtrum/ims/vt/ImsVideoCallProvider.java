@@ -59,6 +59,7 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
     private static final long EVENT_MT_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT = 10000;
     private static final int EVENT_SRVCC_STATE_CHANGED = 100;
     private static final int EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT = 101;//SPRD: add for bug674565
+    private static final long EVENT_MO_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT = 30000;//UNISOC:modify for bug1031767
     //SPRD: add for bug 846738, 905754
     private boolean mIsSupportTxRxVideo;
 
@@ -367,7 +368,7 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
                     msg.what = EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT;
                     msg.obj = mCi;
                     mVTHandler.removeMessages(EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT);
-                    mVTHandler.sendMessageDelayed(msg, 20000);
+                    mVTHandler.sendMessageDelayed(msg,EVENT_MO_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT);
                 }
             }
         }
