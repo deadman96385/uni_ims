@@ -122,8 +122,8 @@ public class VoWifiUTManager extends ServiceManager {
         synchronized (TAG) {
             if (subId < 0 || mRegisterState != RegisterState.STATE_CONNECTED) {
                 // Do not register now. set as prepare failed.
-                resetConfig();
                 notifyPrepareResult(subId, false);
+                resetConfig();
                 return;
             } else if (mInAttaching) {
                 Log.d(TAG, "Already in attaching process, ignore the prepare action.");
@@ -228,30 +228,30 @@ public class VoWifiUTManager extends ServiceManager {
             if (updateSettings()) {
                 notifyPrepareResult(mSubId, true);
             } else {
-                resetConfig();
                 notifyPrepareResult(mSubId, false);
+                resetConfig();
             }
         }
 
         @Override
         public void onFailed(int reason) {
-            resetConfig();
             // Notify the prepare failed.
             notifyPrepareResult(mSubId, false);
+            resetConfig();
         }
 
         @Override
         public void onStopped(boolean forHandover, int errorCode) {
-            resetConfig();
             // Update the service state as attach stopped.
             updateServiceState();
+            resetConfig();
         }
 
         @Override
         public void onDisconnected() {
-            resetConfig();
             // Update the service state as attach stopped.
             updateServiceState();
+            resetConfig();
         }
     }
 
