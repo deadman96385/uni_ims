@@ -520,7 +520,8 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
              if(!isVideoCall(imsCallProfile.mCallType) && mIsVideo && (session != null && session.mImsDriverCall != null) ){
                  if(!mIsVoiceRingTone && !session.getConferenceDriverCallUpdated()) {
                      //Toast.makeText(mContext, mContext.getResources().getString(R.string.videophone_fallback_title), Toast.LENGTH_LONG).show();
-                     showTelcelRequestToast();
+                    // UNISOC: modify for bug1028223
+                     showTelcelRequestToastForFail();
                  }
                  log("updateNegotiatedCallProfilee->makeText");
                  mIsVideo = false;
@@ -689,6 +690,23 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
              makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
          }
     }
+
+    /* UNISOC: add for bug1028223 @{ */
+    public void showTelcelRequestToastForFail(){
+        boolean mShowTelcelToast = true;
+        int primeSubId = SubscriptionManager.getDefaultDataSubscriptionId();
+        CarrierConfigManager configManager = (CarrierConfigManager) mContext.getSystemService(
+                Context.CARRIER_CONFIG_SERVICE);
+        if (configManager.getConfigForSubId(primeSubId) != null) {
+            mShowTelcelToast = configManager.getConfigForSubId(primeSubId).getBoolean(
+                    CarrierConfigManagerEx.KEY_CALL_TELCEL_SHOW_TOAST);
+            log("ImsVideoCallProvider_mShowTelcelToast :" + mShowTelcelToast);
+        }
+        if(mShowTelcelToast){
+            makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_toast),Toast.LENGTH_LONG).show();
+        }
+    }
+    /* @}*/
 
     /**
      * Add method to show toast at LockScreen.

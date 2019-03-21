@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">SprdIms</string>
     <string name="videophone_fallback_title">Video call fall back</string>
+    <!-- SPRD: modify for bug1028223 -->
+    <string name="videophone_fallback_toast">Fail to request video call</string>
     <string name="videophone_failcause_1000">"Last video call hasn't normally ended, please retry after a while"</string>
     <string name="videophone_failcause_1">The number you have dialed is not in service</string>
     <string name="videophone_failcause_3">User is unavailable</string>
