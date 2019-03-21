@@ -217,6 +217,10 @@ public class ImsUtImpl extends IImsUt.Stub {
         public void onPrepareFinished(int subId, boolean success) {
             if (subId != mSubId) return;
 
+            if (!success) {
+                Log.w(TAG, "Prepare failed, subId[" + subId + "] handle all the cmd as failed.");
+            }
+
             // As prepare finished, we could process the action now.
             mUtEnabled = success;
             mCmdManager.processPendingAction();

@@ -115,15 +115,17 @@ public class VoWifiUTManager extends ServiceManager {
         mRegisterState = newState;
         mCurRegIPVersion = ipVersion;
 
-        updateServiceState();
+        if (mRegisterState != RegisterState.STATE_CONNECTED) {
+            notifyServiceDisabled();
+        }
     }
 
     public void prepare(int subId) {
         synchronized (TAG) {
             if (subId < 0 || mRegisterState != RegisterState.STATE_CONNECTED) {
                 // Do not register now. set as prepare failed.
-                resetConfig();
                 notifyPrepareResult(subId, false);
+                resetConfig();
                 return;
             } else if (mInAttaching) {
                 Log.d(TAG, "Already in attaching process, ignore the prepare action.");
@@ -170,12 +172,6 @@ public class VoWifiUTManager extends ServiceManager {
         return mCurIPVersion == IPVersion.IP_V6;
     }
 
-    private boolean isDisabled() {
-        return mRegisterState != RegisterState.STATE_CONNECTED
-                || mSessionId < 1
-                || mSecurityConfig == null;
-    }
-
     private void resetConfig() {
         mInAttaching = false;
         mSessionId = -1;
@@ -189,11 +185,11 @@ public class VoWifiUTManager extends ServiceManager {
         }
     }
 
-    private void updateServiceState() {
-        if (isDisabled()) {
-            for (UTStateChangedListener listener : mIUTChangedListeners) {
-                listener.onDisabled(mSubId);
-            }
+    private void notifyServiceDisabled() {
+        if (mSubId < 0) return;
+
+        for (UTStateChangedListener listener : mIUTChangedListeners) {
+            listener.onDisabled(mSubId);
         }
     }
 
@@ -228,30 +224,30 @@ public class VoWifiUTManager extends ServiceManager {
             if (updateSettings()) {
                 notifyPrepareResult(mSubId, true);
             } else {
-                resetConfig();
                 notifyPrepareResult(mSubId, false);
+                resetConfig();
             }
         }
 
         @Override
         public void onFailed(int reason) {
-            resetConfig();
             // Notify the prepare failed.
             notifyPrepareResult(mSubId, false);
+            resetConfig();
         }
 
         @Override
         public void onStopped(boolean forHandover, int errorCode) {
-            resetConfig();
             // Update the service state as attach stopped.
-            updateServiceState();
+            notifyServiceDisabled();
+            resetConfig();
         }
 
         @Override
         public void onDisconnected() {
-            resetConfig();
             // Update the service state as attach stopped.
-            updateServiceState();
+            notifyServiceDisabled();
+            resetConfig();
         }
     }
 
