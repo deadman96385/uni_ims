@@ -28,7 +28,8 @@ LOCAL_SRC_FILES += $(call all-java-files-under, $(vowifi_adapter_dir)/src)
 
 res_dirs := res $(vowifi_adapter_dir)/res
 LOCAL_RESOURCE_DIR := $(addprefix $(LOCAL_PATH)/, $(res_dirs))
-LOCAL_AAPT_FLAGS := --auto-add-overlay
+LOCAL_AAPT_FLAGS := --auto-add-overlay \
+                    --version-name $(shell date +%Y%m%d%H%M%S)
 
 LOCAL_DEX_PREOPT := false
 
