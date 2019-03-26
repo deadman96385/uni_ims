@@ -221,6 +221,8 @@ public final class ImsRIL {
     static final String CB_FACILITY_BA_PP_PUK = "PPP";
     static final String CB_FACILITY_BA_PC_PUK = "PCP";
 
+    public static final int GET_RAT_CAP_NV_CONFIG = -1;
+    public static final int GET_RAT_CAP_RESULT = 0;
 
     // Used for various supp services apis
     // See 27.007 +CCFC or +CLCK
@@ -1961,9 +1963,9 @@ public final class ImsRIL {
         }
     }
 
-    public void getSpecialRatcap(Message result) {
+    public void getSpecialRatcap(Message result, int value) {
         if (getRadioInteractor() != null) {
-            mRadioInteractor.getSpecialRatcap(result);
+            mRadioInteractor.getSpecialRatcap(result, value);
         }
     }
 

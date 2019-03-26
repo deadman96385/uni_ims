@@ -131,9 +131,10 @@ public class ImsServiceImpl extends MmTelFeature {
     protected static final int EVENT_RADIO_ON                          = 119;
 
     protected static final int EVENT_GET_VIDEO_RESOLUTION              = 120;
-    protected static final int EVENT_GET_RAT_CAP                       = 121;
+    protected static final int EVENT_GET_RAT_CAP_NV_CONFIG             = 121;
     protected static final int EVENT_IMS_GET_IMS_CNI_INFO              = 122;
     protected static final int EVENT_IMS_ERROR_CAUSE_INFO              = 123;
+    protected static final int EVENT_GET_RAT_CAP_RESULT                = 124;
 
     /* UNISOC: add for bug968317 @{ */
     class VoLTECallAvailSyncStatus {
@@ -148,7 +149,11 @@ public class ImsServiceImpl extends MmTelFeature {
     public static final int NETWORK_RAT_CS_ONLY = 2;
     public static final int NETWORK_RAT_PS_BY_IMS_STATUS = 3;
 
-    public static final int IMS_ERROR_CAUSE_TYPE_IMSREG = 2;
+    public static final int IMS_ERROR_CAUSE_TYPE_CALL_FAILED = 0;
+    public static final int IMS_ERROR_CAUSE_TYPE_SMS_FAILED = 1;
+    public static final int IMS_ERROR_CAUSE_TYPE_IMSREG_FAILED = 2;
+    public static final int IMS_ERROR_CAUSE_TYPE_SS_FAILED = 4;
+    public static final int IMS_ERROR_CAUSE_TYPE_USSD_FAILED = 5;
     public static final int IMS_ERROR_CAUSE_ERRCODE_REG_FORBIDDED = 403;
 
     private GsmCdmaPhone mPhone;
@@ -609,14 +614,14 @@ public class ImsServiceImpl extends MmTelFeature {
                         setVideoResolution(videoResolution);
                     }
                     break;
-                case EVENT_GET_RAT_CAP:
+                case EVENT_GET_RAT_CAP_NV_CONFIG:
                     if (ar.exception == null && ar.result != null) {
                         int[] responseArray = (int[]) ar.result;
-                        log("EVENT_GET_RAT_CAP " + responseArray[0]);
+                        log("GET_RAT_CAP_NV_CONFIG " + responseArray[0]);
                         mNetworkRATPrefer = responseArray[0];
-                        mImsService.updateImsFeature(mServiceId);
+                        mCi.getSpecialRatcap(mHandler.obtainMessage(EVENT_GET_RAT_CAP_RESULT), ImsRIL.GET_RAT_CAP_RESULT);
                     } else {
-                        log("EVENT_GET_RAT_CAP ar.exception: " + ar.exception);
+                        log("GET_RAT_CAP_NV_CONFIG ar.exception: " + ar.exception);
                     }
                     break;
                 /* SPRD: add for bug594553 @{ */
@@ -759,6 +764,17 @@ public class ImsServiceImpl extends MmTelFeature {
                         } else {
                             log("EVENT_IMS_REGISTER_SPIMS_REASON: ar == null");
                         }
+                    }
+                    break;
+                case EVENT_GET_RAT_CAP_RESULT:
+                    //UNISOC: add for bug1024577
+                    if (ar.exception == null && ar.result != null) {
+                        int[] responseArray = (int[]) ar.result;
+                        log("EVENT_GET_RAT_CAP_RESULT " + responseArray[0]);
+                        setUtDisableByNetWork(responseArray[0] == 1);//1-csfb
+                        mImsService.updateImsFeature(mServiceId);
+                    } else {
+                        log("EVENT_GET_RAT_CAP_RESULT ar.exception: " + ar.exception);
                     }
                     break;
                 default:
@@ -1665,7 +1681,7 @@ public class ImsServiceImpl extends MmTelFeature {
         if (state != null && mCi != null) {
             if (mServiceState != state.getState()) {
                 log("getSpecialRatcap: servaiceState: " + state.getState());
-                mCi.getSpecialRatcap(mHandler.obtainMessage(EVENT_GET_RAT_CAP));
+                mCi.getSpecialRatcap(mHandler.obtainMessage(EVENT_GET_RAT_CAP_NV_CONFIG), ImsRIL.GET_RAT_CAP_NV_CONFIG);
                 if (state.getState() == ServiceState.STATE_POWER_OFF) {
                     setUtDisableByNetWork(false);
                     log("getSpecialRatcap: mIsUtDisableByNetWork: " + mIsUtDisableByNetWork);
@@ -1699,7 +1715,7 @@ public class ImsServiceImpl extends MmTelFeature {
 
         if (getCarrierCofValueByKey(mPhone.getPhoneId(),
                 CarrierConfigManagerEx.KEY_CARRIER_SUPPORT_DISABLE_UT_BY_NETWORK)) {
-            if (imsErrorCauseInfo.type == IMS_ERROR_CAUSE_TYPE_IMSREG &&
+            if (imsErrorCauseInfo.type == IMS_ERROR_CAUSE_TYPE_IMSREG_FAILED &&
                     imsErrorCauseInfo.errCode == IMS_ERROR_CAUSE_ERRCODE_REG_FORBIDDED) {
                 setUtDisableByNetWork(true);
                 Log.d(TAG, "onImsCsfbReasonInfoChange = " + mIsUtDisableByNetWork);
@@ -1707,6 +1723,9 @@ public class ImsServiceImpl extends MmTelFeature {
                     mImsService.updateImsFeature(mServiceId);
                 }
             }
+        }
+        if (imsErrorCauseInfo.type == IMS_ERROR_CAUSE_TYPE_SS_FAILED) {
+            mCi.getSpecialRatcap(mHandler.obtainMessage(EVENT_GET_RAT_CAP_RESULT), ImsRIL.GET_RAT_CAP_RESULT);
         }
         log("onImsCsfbReasonInfoChange: info:" + imsErrorCauseInfo.type + " errCode:"
                 + imsErrorCauseInfo.errCode + " errDescription: " + imsErrorCauseInfo.errDescription);
