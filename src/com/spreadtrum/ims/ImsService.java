@@ -284,6 +284,7 @@ public class ImsService extends Service {
     private int mVowifiAttachedServiceId = IMS_INVALID_SERVICE_ID; // UNISOC: Add for bug950573
 
     private boolean mIsEmergencyCallonIms = false;//UNisoc: add for bug941037
+    private String  mVoWifiLocalAddr = ""; // UNISOC: Add for bug1008539
 
     private class ImsServiceRequest {
         public int mRequestId;
@@ -454,8 +455,8 @@ public class ImsService extends Service {
                                                 + " mIsVolteCall:" + mIsVolteCall
                                                 + " mWifiRegistered:"
                                                 + mWifiRegistered
-                                                + " mVolteRegistered:"
-                                                + mVolteRegistered);
+                                                + " volteRegistered:"
+                                                + isVoLTERegisted(mVowifiAttachedServiceId)); // UNISOC: modify for bug1008539
                                 /* @} */
                             } else if (mFeatureSwitchRequest.mEventCode == ACTION_SWITCH_IMS_FEATURE) {
                                 mWifiService.register();
@@ -497,7 +498,7 @@ public class ImsService extends Service {
                                 mFeatureSwitchRequest = null;
                                 if ((msg.arg1 == 53766 || msg.arg1 == 53765)&& !mIsCalling) {// SPRD: add
                                                                        // for bug661375 661372 808280
-                                    service.setIMSRegAddress(null);
+                                    setVoWifiLocalAddr(null); // UNISOC: Modify for bug1008539
                                 }
                             }
                         }
@@ -1187,7 +1188,7 @@ public class ImsService extends Service {
                         } else if (mPendingVolteHandoverVolteSuccess) {
                             Log.i(TAG,
                                     "EVENT_UPDATE_DATA_ROUTER_FINISHED->mPendingVolteHandoverVolteSuccess is true");
-                            if((mFeatureSwitchRequest == null) && mVolteRegistered && !mIsCalling) {
+                            if((mFeatureSwitchRequest == null) && !mIsCalling) {
                                 if (mIsS2bStopped) {
                                     Log.i(TAG,
                                             "EVENT_UPDATE_DATA_ROUTER_FINISHED->notifyDataRouter");
@@ -1199,7 +1200,7 @@ public class ImsService extends Service {
                                         Log.i(TAG,"EVENT_UPDATE_DATA_ROUTER_FINISHED, use main sim serviceId: " + vowifiServiceId);
                                     }
                                     ImsServiceImpl imsService = mImsServiceImplMap.get(new Integer(vowifiServiceId));
-                                    if (imsService != null)
+                                    if ((imsService != null) && (isVoLTERegisted(vowifiServiceId))) // UNISOC: modify for bug1008539
                                         imsService.notifyDataRouter();
                                 }
 
@@ -1716,7 +1717,7 @@ public class ImsService extends Service {
             // If current ims register state is registed, and same as the switch
             // to, will do nothing.
             if ((mWifiRegistered && type == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI)
-                    || (isVoLTERegisted() && type == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)) {
+                    || (isVoLTERegisted(ImsRegister.getPrimaryCard(mPhoneCount) + 1) && type == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)) { // UNISOC: modify for bug1008539
                 // Do nothing, return -1.
                 Log.w(TAG, "Needn't switch to type " + type
                         + " as it already registed.");
@@ -2308,6 +2309,9 @@ public class ImsService extends Service {
         if(ImsManagerEx.isDualLteModem()){
             isImsRegistered  = isImsRegistered || mVolteRegistered;
         }
+        Log.i(TAG," notifyImsRegisterState() -> isImsRegistered: "+isImsRegistered
+                  + " currentImsFeature:" + currentImsFeature
+                  + " mVolteRegistered:"+mVolteRegistered);
         synchronized (mImsRegisterListeners) {
             /**
              * SPRD bug647508 & 815956
@@ -2477,8 +2481,8 @@ public class ImsService extends Service {
                 Log.i(TAG,
                         "VoLTERegisterListener-> mFeatureSwitchRequest:"
                                 + mFeatureSwitchRequest + " mIsCalling:"
-                                + mIsCalling + " mVolteRegistered:"
-                                + mVolteRegistered
+                                + mIsCalling + " volteRegistered:"
+                                + isVoLTERegisted(serviceId)
                                 + " service.isImsRegistered():"
                                 + service.isImsRegistered() + " mIsLoggingIn:"
                                 + mIsLoggingIn + " mIsPendingRegisterVolte:"
@@ -2500,7 +2504,7 @@ public class ImsService extends Service {
                 // Volte registered state firstly.
                 if (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED
                         || service.getVolteRegisterState() == IMS_REG_STATE_REG_FAIL) {
-                    mVolteRegistered = (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED);
+                    //mVolteRegistered = (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED); // UNISOC: modify for bug1008539
                     // SPRD: 730973
                     service.setVolteRegisterStateOld(service.isImsRegistered());
                     if (!mIsLoggingIn) {
@@ -2515,7 +2519,7 @@ public class ImsService extends Service {
 //                  if (mVolteRegistered != service.isImsRegistered()){
                     if (service.getVolteRegisterStateOld() != service.isImsRegistered()) {
                         service.setVolteRegisterStateOld(service.isImsRegistered());
-                        mVolteRegistered = service.isImsRegistered();
+                        //mVolteRegistered = service.isImsRegistered(); // UNISOC: modify for bug1008539
                         if (!mIsLoggingIn) {
                             if (ImsManagerEx.isDualVoLTEActive()) {
                                 updateImsFeature(serviceId);
@@ -2764,6 +2768,21 @@ public class ImsService extends Service {
     }
     /* @} */
 
+    /* UNISOC: Add for bug1008539{@ */
+    public void updateVoWifiLocalAddr() {
+        ImsServiceImpl imsService = mImsServiceImplMap.get(Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount) +1));
+        if(imsService != null) {
+            //update VoWifi Local Addr with primary card address
+            setVoWifiLocalAddr(imsService.getIMSRegAddress());
+        }
+    }
+
+    public void setVoWifiLocalAddr(String addr) {
+        mWifiService.setUsedLocalAddr(addr);
+        mVoWifiLocalAddr = addr;
+    }
+    /* @} */
+
     public void updateImsFeature(int serviceId) {
         ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
                 .valueOf(serviceId));
@@ -2873,16 +2892,18 @@ public class ImsService extends Service {
                 + " serviceId:" + serviceId);
     }
 
-    private boolean isVoLTERegisted() {
+    /* UNISOC: modify for bug1008539{@ */
+    private boolean isVoLTERegisted(int serviceId) {
         boolean volteRegistered = false;
-        for (Integer id : mImsServiceImplMap.keySet()) {
-            if (mImsServiceImplMap.get(id).isImsRegisterState()) {
-                volteRegistered = true;
-                break;
-            }
+
+        ImsServiceImpl imsService = mImsServiceImplMap.get(serviceId);
+        if(imsService != null) {
+            volteRegistered = imsService.isImsRegisterState();
         }
+
         return volteRegistered;
     }
+    /* @} */
 
     public void onReceiveHandoverEvent(boolean isCalling, int requestId,
             int targetType) {
@@ -3005,6 +3026,15 @@ public class ImsService extends Service {
                     if (state == IMS_HANDOVER_ACTION_CONFIRMED
                             && SystemProperties.getBoolean(PROP_S2B_ENABLED,
                                     true)) {
+                        /* UNISOC: Add for bug1008539 @{*/
+                        if((mVoWifiLocalAddr == null) || (mVoWifiLocalAddr.length() == 0)) {
+                            Log.i(TAG,
+                                    "onImsHandoverStateChange->Handover to VoWifi, null VoWifi local addr, mIsVolteCall: " + mIsVolteCall);
+                            if (mIsVolteCall) {
+                                updateVoWifiLocalAddr();
+                            }
+                        }
+                        /*@}*/
                         mWifiService.attach((mFeatureSwitchRequest.mEventCode == ACTION_SWITCH_IMS_FEATURE) ? false : true);
                     }
                 }
@@ -3054,8 +3084,8 @@ public class ImsService extends Service {
                 + mFeatureSwitchRequest + " mIsCalling:" + mIsCalling
                 + " mIsCPImsPdnActived:" + mIsCPImsPdnActived
                 + " mIsAPImsPdnActived:" + mIsAPImsPdnActived
-                + " mWifiRegistered:" + mWifiRegistered + " mVolteRegistered:"
-                + mVolteRegistered + " mPendingCPSelfManagement:"
+                + " mWifiRegistered:" + mWifiRegistered + " volteRegistered:"
+                + isVoLTERegisted(serviceId) + " mPendingCPSelfManagement:"
                 + mPendingCPSelfManagement + " mPendingActivePdnSuccess:"
                 + mPendingActivePdnSuccess + " isAirplaneModeOn:"
                 + isAirplaneModeOn + " mInCallHandoverFeature:"
@@ -3217,7 +3247,7 @@ public class ImsService extends Service {
                         }
                         mWifiService.deattach(true);
                         mPendingActivePdnSuccess = false;
-                        if(mVolteRegistered) {
+                        if(isVoLTERegisted(serviceId)) { // UNISOC: modify for bug1008539
                             mPendingVolteHandoverVolteSuccess = true; // UNISOC: add for bug978846
                         }
                         mWifiService
@@ -3511,6 +3541,7 @@ public class ImsService extends Service {
             if ((TelephonyIntents.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED).equals(action)) {
                 Log.i(TAG,"ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, update Ims Feature For Data Change." );
                 updateImsFeatureForDataChange(); //UNISOC: add for bug866765,bug880865
+                updateVoWifiLocalAddr(); // UNISOC: Modify for bug1008539
             } else if ((TelephonyIntents.ACTION_SIM_STATE_CHANGED).equals(action)) {
                 //Unisoc: add for bug1016166
                 String stateExtra = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);

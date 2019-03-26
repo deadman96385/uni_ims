@@ -1342,10 +1342,10 @@ public class ImsServiceImpl extends MmTelFeature {
         mImsRegAddress = addr;
 
         int phoneCount = TelephonyManager.from(mContext).getPhoneCount();
-        if((mPhone.getPhoneId() == getImsRegister().getPrimaryCard(phoneCount)) || (mServiceId == mImsService.getVoWifiServiceId())) { // SPRD: add for bug974910
-            //update vowifi address for primary sim or vowifi service sim.
+        if(mPhone.getPhoneId() == getImsRegister().getPrimaryCard(phoneCount)) { // SPRD: add for bug974910,modify for bug1008539
+            //update vowifi address for primary sim.
             Log.d(TAG, "setIMSRegAddress update VoWifi addr, phone Id =" + mPhone.getPhoneId() + " vowifiServId =" + mImsService.getVoWifiServiceId());
-            mWifiService.setUsedLocalAddr(addr);
+            mImsService.setVoWifiLocalAddr(addr);
         }
     }
     public void requestImsHandover(int type){
