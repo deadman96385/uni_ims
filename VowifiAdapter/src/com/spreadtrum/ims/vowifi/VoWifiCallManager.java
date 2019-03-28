@@ -1478,7 +1478,6 @@ public class VoWifiCallManager extends ServiceManager {
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
             listener.callSessionUpdated(callProfile);
-            listener.callSessionMultipartyStateChanged(true);
         }
 
         Toast.makeText(mContext, R.string.vowifi_call_is_focus, Toast.LENGTH_LONG).show();
