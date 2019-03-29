@@ -1314,6 +1314,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public void updateVoiceQuality(boolean highQuality) {
         if (mCallProfile == null) return;
 
+        int curQuality = mCallProfile.mMediaProfile.mAudioQuality;
+        boolean isHighQuality = (curQuality == ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB);
+        if (isHighQuality == highQuality) {
+            Log.d(TAG, "Same as current audio quality is " + curQuality + ", needn't update.");
+            return;
+        }
+
         mCallProfile.mMediaProfile.mAudioQuality = highQuality
                 ? ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB
                 : ImsStreamMediaProfile.AUDIO_QUALITY_AMR;

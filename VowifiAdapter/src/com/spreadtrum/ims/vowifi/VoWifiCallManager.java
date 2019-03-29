@@ -1472,7 +1472,8 @@ public class VoWifiCallManager extends ServiceManager {
         callSession.updateAsIsFocus();
 
         ImsCallProfile callProfile = callSession.getCallProfile();
-        callProfile.setCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, true);
+        // FIXME: Add a new extra as "EXTRA_IS_FOCUS" to marked is focus. And needn't
+        //        set the original extra "EXTRA_CONFERENCE".
         callProfile.setCallExtraBoolean(EXTRA_IS_FOCUS, true);
 
         IImsCallSessionListener listener = callSession.getListener();
