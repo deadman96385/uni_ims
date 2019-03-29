@@ -607,11 +607,11 @@ public class ImsServiceImpl extends MmTelFeature {
                     setInitialAttachSosApn(state);
                     break;
                 // White list refactor: get default video resolution
-                case EVENT_GET_VIDEO_RESOLUTION:
-                    if (ar.exception == null && ar.result != null && ar.result instanceof Integer) {
-                        Integer responseArray = (Integer)ar.result;
-                        int videoResolution = responseArray.intValue();
-                        setVideoResolution(videoResolution);
+                case EVENT_GET_VIDEO_RESOLUTION:  //Unisoc change for bug 1035159
+                    if (ar.exception == null && ar.result != null ) {
+                        int[] videoResolution = (int[]) ar.result;
+                        log("EVENT_GET_VIDEO_RESOLUTION from NV: " + videoResolution[0]);
+                        setVideoResolution(videoResolution[0]);
                     }
                     break;
                 case EVENT_GET_RAT_CAP_NV_CONFIG:

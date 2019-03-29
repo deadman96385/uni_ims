@@ -172,8 +172,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
         mSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferenceListener);
         // SPRD 864003
         mCameraResolution = mSharedPreferences.getInt(VIDEO_CALL_RESOLUTION+imsserviceid, mDefaultVtResolution);
-        mHandler.removeMessages(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE);
-        mHandler.sendEmptyMessageDelayed(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE, 1000);
         mImsServiceId = imsserviceid; // SPRD: bug805154
     }
 
@@ -439,10 +437,14 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     public void sendVideoQualitytoIMS(int value) {
         int vtResolution = mSharedPreferences.getInt(
                 VT_RESOLUTION_VALUE + mImsServiceId, -1);
-        Log.d(TAG, "sendVideoQualitytoIMS : vtResolution = " + vtResolution
+        Log.i(TAG, "sendVideoQualitytoIMS : vtResolution = " + vtResolution
                         + " | mDefaultVtResolution = " + mDefaultVtResolution);
-        mCameraResolution = value;
-        if (vtResolution == -1) {
+
+        if (vtResolution == -1) { //Unisoc change for bug 1035159
+            Log.i(TAG, "user don't change setting,get value from NV");
+            mCameraResolution = value;
+            mDefaultVtResolution = value;
+
             mHandler.removeMessages(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE);
             mHandler.sendEmptyMessageDelayed(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE, 1000);
         }
