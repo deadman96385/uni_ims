@@ -44,6 +44,7 @@ import android.util.Xml;
 import com.android.internal.util.XmlUtils;
 import android.telephony.ServiceState;
 import com.android.ims.internal.ImsManagerEx;
+import com.android.ims.ImsManager;
 
 public class ImsRegister {
     private static final String TAG = "ImsRegister";
@@ -464,8 +465,29 @@ public class ImsRegister {
             return;
         }
         if(mIMSBearerEstablished && mInitISIMDone) {
+            // UNISOC Bug 1035169 (This requirement may change in future) @{
+            if(needDisableImsForCt()) {
+                // this is a CDMA card and VOLTE settings is not enabled by user
+                log("enableIms -> disable for carrier requirement.");
+                return;
+            }
+            // @}
             mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
         }
+    }
+
+    /**
+     * UNISOC Bug 1035169
+     * CT requirement disable VOLTE by default. (This requirement may change in future)
+     * @return true if this is a CDMA card and VOLTE settings is not enabled by user
+     */
+    private boolean needDisableImsForCt() {
+        boolean isCt = mUiccController.getUiccCardApplication(mPhoneId,
+                    UiccController.APP_FAM_3GPP2) != null;
+        boolean volteSettingEnabledByUser = ImsManager.getInstance(mContext,mPhone.getPhoneId())
+                    .isEnhanced4gLteModeSettingEnabledByUser();
+
+        return isCt && !volteSettingEnabledByUser;
     }
 
     private boolean getNetworkConfig(String numeric){
