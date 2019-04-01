@@ -1722,6 +1722,10 @@ public class ImsService extends Service {
                 Log.w(TAG, "Needn't switch to type " + type
                         + " as it already registed.");
                 return -1;
+            } else if ((mReleaseVowifiRequest != null) && (type == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI)) { //UNISOC:add for bug1038496
+                // Do nothing, return -1.
+                Log.w(TAG, "Cann't switch to type " + type + " as release or cancel vowifi action ongoing.");
+                return -1;
             } else {
                 int id = getReuestId();
                 mHandler.obtainMessage(ACTION_SWITCH_IMS_FEATURE, id, type)
