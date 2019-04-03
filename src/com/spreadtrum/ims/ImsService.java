@@ -520,27 +520,36 @@ public class ImsService extends Service {
                         mAttachVowifiSuccess = false;// SPRD:Add for bug604833
                         break;
                     case EVENT_WIFI_INCOMING_CALL:
-                        ImsServiceImpl service = mImsServiceImplMap
-                                .get(Integer.valueOf(ImsRegister
-                                        .getPrimaryCard(mPhoneCount) + 1));
+                        /* UNISOC: Modify for bug1041919 @{*/
+                        int callServiceId = getVoWifiServiceId();
+                        if ((callServiceId != IMS_INVALID_SERVICE_ID) && (callServiceId != (ImsRegister.getPrimaryCard(mPhoneCount) + 1))) {
+                            Log.i(TAG, "primaryCard is not same as Vowifi service Card. callServiceId = " + callServiceId);
+                            break;
+                        }
 
-                        IImsCallSession callSession = (IImsCallSession) msg.obj;
-                        service.sendIncomingCallIntent(callSession, callSession.getCallId(), false, false); // UNISOC: Modify for bug909030
+                        ImsServiceImpl service = mImsServiceImplMap
+                                .get(Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1));
+                        if (service != null) {
+                            IImsCallSession callSession = (IImsCallSession) msg.obj;
+                            service.sendIncomingCallIntent(callSession, callSession.getCallId(), false, false); // UNISOC: Modify for bug909030
+                        }
+                        /*@}*/
+
                         Log.i(TAG, "EVENT_WIFI_INCOMING_CALL-> callId:" + msg.obj);
                         break;
                     case EVENT_WIFI_ALL_CALLS_END:
-                        if (mImsServiceListenerEx != null) {
-                            Log.i(TAG,
-                                    "EVENT_WIFI_ALL_CALLS_END-> mFeatureSwitchRequest:"
-                                            + mFeatureSwitchRequest
-                                            + " mIsVowifiCall:" + mIsVowifiCall
-                                            + " mIsVolteCall:" + mIsVolteCall
-                                            + " mInCallHandoverFeature:"
-                                            + mInCallHandoverFeature
-                                            + " mIsPendingRegisterVolte:"
-                                            + mIsPendingRegisterVolte
-                                            + " mIsPendingRegisterVowifi:"
-                                            + mIsPendingRegisterVowifi);
+                        Log.i(TAG,
+                                "EVENT_WIFI_ALL_CALLS_END-> mFeatureSwitchRequest:"
+                                        + mFeatureSwitchRequest
+                                        + " mIsVowifiCall:" + mIsVowifiCall
+                                        + " mIsVolteCall:" + mIsVolteCall
+                                        + " mInCallHandoverFeature:"
+                                        + mInCallHandoverFeature
+                                        + " mIsPendingRegisterVolte:"
+                                        + mIsPendingRegisterVolte
+                                        + " mIsPendingRegisterVowifi:"
+                                        + mIsPendingRegisterVowifi);
+                        if (mImsServiceListenerEx != null) { // UNISOC: Modify for bug1041919
                             if (mFeatureSwitchRequest != null) {
                                 if (mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER) {
                                     /* SPRD: Add for bug586758,595321,610799{@ */
@@ -603,45 +612,52 @@ public class ImsService extends Service {
                                     }
                                     /* @} */
                                 }
-                            } else {
-                                ImsServiceImpl currentService = mImsServiceImplMap
-                                        .get(Integer.valueOf(ImsRegister
-                                                .getPrimaryCard(mPhoneCount) + 1));
-                                if (currentService != null) {
-                                    int currentImsFeature = currentService.getCurrentImsFeature(); // UNISOC: Add for bug950573
-                                    if (currentService.isVolteSessionListEmpty()
-                                            && currentService
-                                                    .isVowifiSessionListEmpty()) {
-                                        Log.i(TAG,
-                                                "EVENT_WIFI_ALL_CALLS_END->currentImsFeature:"
-                                                        + currentImsFeature);
-                                        updateInCallState(false);
-                                        mCallEndType = CallEndEvent.WIFI_CALL_END;
-                                        mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                                        mWifiService
-                                                .updateCallRatState(CallRatState.CALL_NONE);
-                                    }
-                                }
                             }
-                            /* SPRD: Modify for bug595321{@ */
-                            ImsServiceImpl imsService = mImsServiceImplMap
-                                    .get(Integer.valueOf(ImsRegister
-                                            .getPrimaryCard(mPhoneCount) + 1));
-                            if (imsService != null) {
-                                if (imsService.isVolteSessionListEmpty()
-                                        && imsService.isVowifiSessionListEmpty()) {
-                                    if (mIsVowifiCall) {
-                                        mIsVowifiCall = false;
-                                    } else if (mIsVolteCall) {
-                                        mIsVolteCall = false;
-                                    }
-                                }
-                            } else {
-                                Log.i(TAG,
-                                        "EVENT_WIFI_ALL_CALLS_END->ImsServiceImpl is null");
-                            }
-                            /* @} */
                         }
+
+                        /* UNISOC: Modify for bug1041919 @{*/
+                        int VoWifiCallServiceId = getVoWifiServiceId();
+                        if(VoWifiCallServiceId == IMS_INVALID_SERVICE_ID) {
+                            VoWifiCallServiceId = ImsRegister.getPrimaryCard(mPhoneCount) + 1;
+                            Log.i(TAG,"main sim serviceId: " + VoWifiCallServiceId);
+                        }
+
+                        ImsServiceImpl currentService = mImsServiceImplMap
+                                        .get(Integer.valueOf(VoWifiCallServiceId));
+                        if (currentService != null) {
+                            if (currentService.isVolteSessionListEmpty() && currentService.isVowifiSessionListEmpty()) {
+                                int currentImsFeature = currentService.getCurrentImsFeature(); // UNISOC: Add for bug950573
+                                Log.i(TAG,
+                                        "EVENT_WIFI_ALL_CALLS_END->currentImsFeature:"
+                                                + currentImsFeature);
+                                if (mFeatureSwitchRequest == null) {
+                                    updateInCallState(false);
+                                    mCallEndType = CallEndEvent.WIFI_CALL_END;
+                                    mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                                    mWifiService
+                                            .updateCallRatState(CallRatState.CALL_NONE);
+                                }
+
+                                /* SPRD: Modify for bug595321{@ */
+                                if (mIsVowifiCall) {
+                                    mIsVowifiCall = false;
+                                } else if (mIsVolteCall) {
+                                    mIsVolteCall = false;
+                                }
+                                /*@}*/
+                            }
+                            else {
+                                Log.i(TAG,
+                                        "session list not empty,isVolteSessionListEmpty: " + currentService.isVolteSessionListEmpty()
+                                        + "isVowifiSessionListEmpty: " + currentService.isVowifiSessionListEmpty());
+                            }
+                        }
+                        else {
+                            Log.i(TAG,
+                                    "EVENT_WIFI_ALL_CALLS_END->ImsServiceImpl is null");
+                        }
+                        /* @} */
+
                         break;
                     case EVENT_WIFI_REFRESH_RESAULT:
                         break;
