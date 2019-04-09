@@ -2744,7 +2744,8 @@ public class ImsService extends Service {
 
             for (Integer id : mImsServiceImplMap.keySet()) {
                 ImsServiceImpl service = mImsServiceImplMap.get(id);
-                updateImsFeature(service.getServiceId());
+                if (service.getVolteRegisterState() != IMS_REG_STATE_REGISTERING) // UNISOC: Add for bug1038497
+                    updateImsFeature(service.getServiceId());
             }
         }
     }
