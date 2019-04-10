@@ -115,7 +115,9 @@ public class VoWifiUTManager extends ServiceManager {
         mRegisterState = newState;
         mCurRegIPVersion = ipVersion;
 
-        updateServiceState();
+        if (mRegisterState != RegisterState.STATE_CONNECTED) {
+            notifyServiceDisabled();
+        }
     }
 
     public void prepare(int subId) {
@@ -170,12 +172,6 @@ public class VoWifiUTManager extends ServiceManager {
         return mCurIPVersion == IPVersion.IP_V6;
     }
 
-    private boolean isDisabled() {
-        return mRegisterState != RegisterState.STATE_CONNECTED
-                || mSessionId < 1
-                || mSecurityConfig == null;
-    }
-
     private void resetConfig() {
         mInAttaching = false;
         mSessionId = -1;
@@ -189,11 +185,11 @@ public class VoWifiUTManager extends ServiceManager {
         }
     }
 
-    private void updateServiceState() {
-        if (isDisabled()) {
-            for (UTStateChangedListener listener : mIUTChangedListeners) {
-                listener.onDisabled(mSubId);
-            }
+    private void notifyServiceDisabled() {
+        if (mSubId < 0) return;
+
+        for (UTStateChangedListener listener : mIUTChangedListeners) {
+            listener.onDisabled(mSubId);
         }
     }
 
@@ -243,14 +239,14 @@ public class VoWifiUTManager extends ServiceManager {
         @Override
         public void onStopped(boolean forHandover, int errorCode) {
             // Update the service state as attach stopped.
-            updateServiceState();
+            notifyServiceDisabled();
             resetConfig();
         }
 
         @Override
         public void onDisconnected() {
             // Update the service state as attach stopped.
-            updateServiceState();
+            notifyServiceDisabled();
             resetConfig();
         }
     }
