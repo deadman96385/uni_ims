@@ -1230,9 +1230,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             } else if (mCallback != null) {
                 mCmdAttachState = CMD_STATE_INVALID;
                 mCallback.onAttachFinished(false, reason);
-                if (mResetStep >= RESET_STEP_DEATTACH
-                        && reason == Utilities.NativeErrorCode.IKE_INTERRUPT_STOP) {
-                    Log.d(mTag, "Attached failed cased by interrupt. It means reset finished.");
+                if (mResetStep != RESET_STEP_INVALID) {
+                    Log.d(mTag, "Attached failed but in reset process. It means reset finished.");
                     resetFinished();
                 }
             }
