@@ -1100,7 +1100,8 @@ public class VoWifiCallManager extends ServiceManager {
         //       then we need reject all the incoming call from the VOWIFI.
         if (!isCallFunEnabled()
                 || mIncomingCallAction == IncomingCallAction.REJECT
-                || (!Utilities.isCallWaitingEnabled() && getCallCount() > 1)) {
+                || (!Utilities.isCallWaitingEnabled() && getCallCount() > 1)
+                || !canAcceptIncomingCall()) {
             callSession.reject(ImsReasonInfo.CODE_USER_DECLINE);
         } else {
             // Send the incoming call callback.
@@ -1910,6 +1911,28 @@ public class VoWifiCallManager extends ServiceManager {
         if (needInviteNext) {
             // Send the message to invite the next participant.
             mHandler.sendMessage(mHandler.obtainMessage(MSG_INVITE_CALL, confSession));
+        }
+    }
+
+    private boolean canAcceptIncomingCall() {
+        if (mSessionList.size() < 2) {
+            // It means there is only one call as the new incoming call.
+            return true;
+        } else {
+            // There is more than one call, we need to check all the calls if wait for update
+            // response. If there is update request, the hold action will be failed, and can't
+            // accept the incoming call.
+            boolean hasUpdate = false;
+            for (ImsCallSessionImpl session : mSessionList) {
+                ImsVideoCallProviderImpl provider = session.getVideoCallProviderImpl();
+                if (provider.isWaitForModifyResponse()) {
+                    hasUpdate = true;
+                }
+            }
+
+            // If there isn't update request, the user could accept the incoming call.
+            Log.d(TAG, "There is the update request? hasUpdate: " + hasUpdate);
+            return !hasUpdate;
         }
     }
 
