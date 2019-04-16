@@ -1833,14 +1833,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
 
         try {
-            int res = mICall.sendSessionModifyRequest(mCallId, newVideoType);
-            if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to send the modify request for the call: " + mCallId);
-                if (mListener != null) {
-                    mListener.callSessionUpdateFailed(new ImsReasonInfo());
-                }
-            }
-            return res;
+            return mICall.sendSessionModifyRequest(mCallId, newVideoType);
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to send the modify request as catch RemoteException e: " + e);
             return Result.FAIL;
