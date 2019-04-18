@@ -1,0 +1,4 @@
+<resources>
+    <!-- UNISOC: add for bug 1051882-->
+    <string name="vowifi_regist_fail_content">当下网络暂时异常,请5分钟后再尝试</string>
+</resources>
