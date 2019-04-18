@@ -457,7 +457,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             hasUpdate = true;
         }
         hasUpdate = mImsDriverCall.update(dc) || hasUpdate;
-        if (mImsDriverCall.state == ImsDriverCall.State.ACTIVE || mImsDriverCall.state == ImsDriverCall.State.DIALING) {
+        if (mImsDriverCall.state == ImsDriverCall.State.ACTIVE
+                || mImsDriverCall.state == ImsDriverCall.State.DIALING
+                || mImsDriverCall.state == ImsDriverCall.State.HOLDING) {
             if (mIsMegerAction && !mImsServiceCallTracker.isMegerActionHost()) {
                 mIsMegerAction = false;
                 mImsServiceCallTracker.onCallMergeComplete(this);
