@@ -334,6 +334,9 @@ public class ImsRegister {
                         instanceId = "urn:gsma:imei:" + imei.substring(0, 8)
                                 + "-" + imei.substring(8, 14) + "-"
                                 + imei.substring(14);
+                    } else {
+                       log("imei is null.just return");
+                       return;
                     }
                     log("instanceId = " + instanceId);
                 } else {
