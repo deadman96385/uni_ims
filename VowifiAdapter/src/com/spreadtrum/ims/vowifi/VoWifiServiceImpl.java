@@ -219,10 +219,10 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         private void handleMsgReset(int step) {
             Log.d(mTag, "Handle the reset message as step: " + step);
 
-            // Give the callback when the reset action start.
-            if (mCallback != null) mCallback.onResetStarted();
-
             if (mResetStep == RESET_STEP_DEREGISTER) {
+                // Give the callback when the reset action start.
+                if (mCallback != null) mCallback.onResetStarted();
+
                 if (mRegisterMgr.getCurRegisterState() == RegisterState.STATE_CONNECTED) {
                     deregisterInternal();
                     // If the de-register is timeout, force reset.
@@ -1156,22 +1156,22 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onDisconnected() {
             Log.d(mTag, "Register service disconnected, and current register cmd state is: "
                     + mCmdRegisterState);
-            mCmdRegisterState = CMD_STATE_INVALID;
 
-            if (mCallback == null) return;
-
-            switch (mCmdRegisterState) {
-                case CMD_STATE_INVALID:
-                    // Do nothing as there isn't any register command.
-                    break;
-                case CMD_STATE_FINISHED:
-                    mCallback.onUnsolicitedUpdate(UnsolicitedCode.SIP_LOGOUT);
-                    // And same as in progress, need notify the register state change to idle.
-                    // Needn't break here.
-                case CMD_STATE_PROGRESS:
-                    mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
-                    break;
+            if (mCallback != null) {
+                switch (mCmdRegisterState) {
+                    case CMD_STATE_INVALID:
+                        // Do nothing as there isn't any register command.
+                        break;
+                    case CMD_STATE_FINISHED:
+                        mCallback.onUnsolicitedUpdate(UnsolicitedCode.SIP_LOGOUT);
+                        // And same as in progress, need notify the register state change to idle.
+                        // Needn't break here.
+                    case CMD_STATE_PROGRESS:
+                        mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
+                        break;
+                }
             }
+            mCmdRegisterState = CMD_STATE_INVALID;
         }
 
     }
@@ -1303,22 +1303,29 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onDisconnected() {
             Log.d(mTag, "Security service disconnected, and current attach cmd state is: "
                     + mCmdAttachState);
-            mCmdAttachState = CMD_STATE_INVALID;
 
-            if (mCallback == null) return;
-
-            switch (mCmdAttachState) {
-                case CMD_STATE_INVALID:
-                    // There isn't attach cmd, do nothing.
-                    break;
-                case CMD_STATE_PROGRESS:
-                    mCallback.onAttachFinished(false, 0);
-                    break;
-                case CMD_STATE_FINISHED:
-                    mCallback.onAttachStopped(0);
-                    mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
-                    break;
+            // If the service disconnect, security and register will get this callback.
+            // We'd like to handle the reset finished only once.
+            if (mResetStep != RESET_STEP_INVALID) {
+                Log.d(mTag, "Service disconnect, and the current reset step is " + mResetStep);
+                resetFinished();
             }
+
+            if (mCallback != null) {
+                switch (mCmdAttachState) {
+                    case CMD_STATE_INVALID:
+                        // There isn't attach cmd, do nothing.
+                        break;
+                    case CMD_STATE_PROGRESS:
+                        mCallback.onAttachFinished(false, 0);
+                        break;
+                    case CMD_STATE_FINISHED:
+                        mCallback.onAttachStopped(0);
+                        mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
+                        break;
+                }
+            }
+            mCmdAttachState = CMD_STATE_INVALID;
         }
     }
 
