@@ -51,6 +51,7 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
     private boolean mIsVideo;//SPRD:add for bug563112
     public boolean mIsVoiceRingTone = false;//SPRD: add for bug677255
     public boolean mIsOrigionVideo = false;
+    private boolean mIsActiveVideo = false;
     private Message mCallIdMessage;
     private VideoProfile mLoacalRequstProfile;
 
@@ -494,6 +495,10 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
          ImsCallProfile imsCallProfile = session.getCallProfile();
          VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
          log("updateNegotiatedCallProfilee->mCallType="+imsCallProfile.mCallType+" session state = "+session.getState()+ "mIsVoiceRingTone ="+mIsVoiceRingTone);
+         if (isVideoCall(imsCallProfile.mCallType) && session.mImsDriverCall.state == ImsDriverCall.State.ACTIVE) {
+             Log.i(TAG, "updateNegotiatedCallProfile: video call with state in " + session.mImsDriverCall.state);
+             mIsActiveVideo = true;
+         }
          //SPRD:fix for bug 827280
          if (mLocalRequestProfile != null) {
              int result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_FAIL;
@@ -521,7 +526,7 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
                  if(!mIsVoiceRingTone && !session.getConferenceDriverCallUpdated()) {
                      //Toast.makeText(mContext, mContext.getResources().getString(R.string.videophone_fallback_title), Toast.LENGTH_LONG).show();
                     // UNISOC: modify for bug1028223
-                     showTelcelRequestToastForFail();
+                     showTelcelRequestToast();
                  }
                  log("updateNegotiatedCallProfilee->makeText");
                  mIsVideo = false;
@@ -686,27 +691,14 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
              log("ImsVideoCallProvider_mShowTelcelToast :" + mShowTelcelToast);
          }
          if(mShowTelcelToast){
-             //SPRD:fix for bug 825045
-             makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
+             //SPRD:fix for bug 825045, 1057367
+             if (mIsActiveVideo) {
+                 makeText(mContext, mContext.getResources().getString(R.string.videophone_fallback_title), Toast.LENGTH_LONG).show();
+             } else {
+                 makeText(mContext, mContext.getResources().getString(R.string.videophone_fallback_toast), Toast.LENGTH_LONG).show();
+             }
          }
     }
-
-    /* UNISOC: add for bug1028223 @{ */
-    public void showTelcelRequestToastForFail(){
-        boolean mShowTelcelToast = true;
-        int primeSubId = SubscriptionManager.getDefaultDataSubscriptionId();
-        CarrierConfigManager configManager = (CarrierConfigManager) mContext.getSystemService(
-                Context.CARRIER_CONFIG_SERVICE);
-        if (configManager.getConfigForSubId(primeSubId) != null) {
-            mShowTelcelToast = configManager.getConfigForSubId(primeSubId).getBoolean(
-                    CarrierConfigManagerEx.KEY_CALL_TELCEL_SHOW_TOAST);
-            log("ImsVideoCallProvider_mShowTelcelToast :" + mShowTelcelToast);
-        }
-        if(mShowTelcelToast){
-            makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_toast),Toast.LENGTH_LONG).show();
-        }
-    }
-    /* @}*/
 
     /**
      * Add method to show toast at LockScreen.
