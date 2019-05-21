@@ -751,16 +751,24 @@ public class VoWifiCallManager extends ServiceManager {
                 return;
             }
 
-            int res = mICall.confAddMembers(Integer.valueOf(confSession.getCallId()), null,
-                    new int[] { Integer.valueOf(callSession.getCallId()) });
-            if (res == Result.FAIL) {
-                // Invite this call failed.
-                Log.w(TAG, "Failed to invite the call " + callSession);
-                String text = mContext.getString(R.string.vowifi_conf_invite_failed)
-                        + callSession.getCallee();
-                Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
+            if (callSession.getState() < State.ESTABLISHED
+                    || callSession.getState() > State.TERMINATING) {
+                // It means this call is terminated or do not setup finished.
+                // We'd like to ignore this call.
+                Log.w(TAG, "As state error, ignore this call" + callSession + " to conference"
+                        + confSession);
             } else {
-                success = true;
+                int res = mICall.confAddMembers(Integer.valueOf(confSession.getCallId()), null,
+                        new int[] { Integer.valueOf(callSession.getCallId()) });
+                if (res == Result.FAIL) {
+                    // Invite this call failed.
+                    Log.w(TAG, "Failed to invite the call " + callSession);
+                    String text = mContext.getString(R.string.vowifi_conf_invite_failed)
+                            + callSession.getCallee();
+                    Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
+                } else {
+                    success = true;
+                }
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to invite the call as catch the RemoteException e: " + e);
@@ -1100,7 +1108,8 @@ public class VoWifiCallManager extends ServiceManager {
         //       then we need reject all the incoming call from the VOWIFI.
         if (!isCallFunEnabled()
                 || mIncomingCallAction == IncomingCallAction.REJECT
-                || (!Utilities.isCallWaitingEnabled() && getCallCount() > 1)) {
+                || (!Utilities.isCallWaitingEnabled() && getCallCount() > 1)
+                || !canAcceptIncomingCall()) {
             callSession.reject(ImsReasonInfo.CODE_USER_DECLINE);
         } else {
             // Send the incoming call callback.
@@ -1287,8 +1296,9 @@ public class VoWifiCallManager extends ServiceManager {
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_RESUME_OK:
-            case JSONUtils.EVENT_CODE_CONF_RESUME_OK: {
+                // Only the alert info for the normal call.
                 toastTextResId = R.string.vowifi_resume_success;
+            case JSONUtils.EVENT_CODE_CONF_RESUME_OK: {
                 callSession.updateAliveState(true /* resumed, alive now */);
                 listener.callSessionResumed(callSession.getCallProfile());
                 break;
@@ -1302,14 +1312,16 @@ public class VoWifiCallManager extends ServiceManager {
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_HOLD_RECEIVED:
-            case JSONUtils.EVENT_CODE_CONF_HOLD_RECEIVED: {
+                // Only the alert info for the normal call.
                 toastTextResId = R.string.vowifi_hold_received;
+            case JSONUtils.EVENT_CODE_CONF_HOLD_RECEIVED: {
                 listener.callSessionHoldReceived(callSession.getCallProfile());
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_RESUME_RECEIVED:
-            case JSONUtils.EVENT_CODE_CONF_RESUME_RECEIVED: {
+                // Only the alert info for the normal call.
                 toastTextResId = R.string.vowifi_resume_received;
+            case JSONUtils.EVENT_CODE_CONF_RESUME_RECEIVED: {
                 listener.callSessionResumeReceived(callSession.getCallProfile());
                 break;
             }
@@ -1472,13 +1484,13 @@ public class VoWifiCallManager extends ServiceManager {
         callSession.updateAsIsFocus();
 
         ImsCallProfile callProfile = callSession.getCallProfile();
-        callProfile.setCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, true);
+        // FIXME: Add a new extra as "EXTRA_IS_FOCUS" to marked is focus. And needn't
+        //        set the original extra "EXTRA_CONFERENCE".
         callProfile.setCallExtraBoolean(EXTRA_IS_FOCUS, true);
 
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
             listener.callSessionUpdated(callProfile);
-            listener.callSessionMultipartyStateChanged(true);
         }
 
         Toast.makeText(mContext, R.string.vowifi_call_is_focus, Toast.LENGTH_LONG).show();
@@ -1910,6 +1922,28 @@ public class VoWifiCallManager extends ServiceManager {
         if (needInviteNext) {
             // Send the message to invite the next participant.
             mHandler.sendMessage(mHandler.obtainMessage(MSG_INVITE_CALL, confSession));
+        }
+    }
+
+    private boolean canAcceptIncomingCall() {
+        if (mSessionList.size() < 2) {
+            // It means there is only one call as the new incoming call.
+            return true;
+        } else {
+            // There is more than one call, we need to check all the calls if wait for update
+            // response. If there is update request, the hold action will be failed, and can't
+            // accept the incoming call.
+            boolean hasUpdate = false;
+            for (ImsCallSessionImpl session : mSessionList) {
+                ImsVideoCallProviderImpl provider = session.getVideoCallProviderImpl();
+                if (provider.isWaitForModifyResponse()) {
+                    hasUpdate = true;
+                }
+            }
+
+            // If there isn't update request, the user could accept the incoming call.
+            Log.d(TAG, "There is the update request? hasUpdate: " + hasUpdate);
+            return !hasUpdate;
         }
     }
 

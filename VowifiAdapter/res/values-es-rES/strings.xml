@@ -25,7 +25,7 @@
     <string name="vowifi_conf_invite_request_failed">"Error al enviar la solicitud de invitación"</string>
     <string name="vowifi_conf_invite_failed">No se pudo invitar al participante:</string>
     <string name="vowifi_conf_kick_failed">No se pudo eliminar el participante</string>
-    <string name="vowifi_conf_none_participant">"No hay participantes, terminar la llamada"</string>
+    <string name="vowifi_conf_none_participant">"No hay ningún participante, llamada finalizada."</string>
     <string name="vowifi_conf_do_not_support">"Esta acción no se admite ahora"</string>
     <string name="vowifi_conf_can_not_invite_more">"No se puede invitar a más participantes a la conferencia, porque ya contiene seis"</string>
 </resources>

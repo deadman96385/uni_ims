@@ -483,12 +483,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
 
         // Check if emergency call.
-        boolean isEmergencyService = profile.mServiceType == ImsCallProfile.SERVICE_TYPE_EMERGENCY;
-        boolean isEmergencyNumber = PhoneNumberUtils.isEmergencyNumber(callee);
+        boolean isRealEmergency = EMUtils.isRealEmergencyNumber(mContext, callee);
         String sosNumber = SystemProperties.get(PROP_KEY_FORCE_SOS_CALL, null);
         boolean forceSos = callee.equals(sosNumber);
 
-        if (isEmergencyService || isEmergencyNumber || forceSos) {
+        if (isRealEmergency || forceSos) {
             startEmergencyCall(callee);
         } else {
             startCall(callee);
@@ -1315,6 +1314,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public void updateVoiceQuality(boolean highQuality) {
         if (mCallProfile == null) return;
 
+        int curQuality = mCallProfile.mMediaProfile.mAudioQuality;
+        boolean isHighQuality = (curQuality == ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB);
+        if (isHighQuality == highQuality) {
+            Log.d(TAG, "Same as current audio quality is " + curQuality + ", needn't update.");
+            return;
+        }
+
         mCallProfile.mMediaProfile.mAudioQuality = highQuality
                 ? ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB
                 : ImsStreamMediaProfile.AUDIO_QUALITY_AMR;
@@ -1827,14 +1833,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
 
         try {
-            int res = mICall.sendSessionModifyRequest(mCallId, newVideoType);
-            if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to send the modify request for the call: " + mCallId);
-                if (mListener != null) {
-                    mListener.callSessionUpdateFailed(new ImsReasonInfo());
-                }
-            }
-            return res;
+            return mICall.sendSessionModifyRequest(mCallId, newVideoType);
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to send the modify request as catch RemoteException e: " + e);
             return Result.FAIL;
@@ -2093,20 +2092,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             // Start an emergency call directly.
             startCall(callee);
         } else {
-            if (!mCallManager.isCallFunEnabled()) {
-                // Call function is disabled, it means the normal s2b unavailable.
-                // So we needn't remove the old s2b.
-                needRemoveOldS2b = false;
-            } else {
-                // Check if need remove the old s2b for sos.
-                needRemoveOldS2b = mCursor != null ? mCursor.sosNeedRemoveOldS2b() : true;
-
-                if (!needRemoveOldS2b) {
-                    if (!Utilities.isSupportSOSSingleProcess(mContext)) {
-                        // Do not support sos single process, we'd like to handle
-                        // the emergency call as need remove old s2b.
-                        needRemoveOldS2b = true;
-                    }
+            // Check if need remove the old s2b for sos.
+            needRemoveOldS2b = mCursor != null ? mCursor.sosNeedRemoveOldS2b() : true;
+            Log.d(TAG, "Get the need remove old s2b as: " + needRemoveOldS2b);
+            if (!needRemoveOldS2b) {
+                if (!Utilities.isSupportSOSSingleProcess(mContext)) {
+                    // Do not support sos single process, we'd like to handle
+                    // the emergency call as need remove old s2b.
+                    needRemoveOldS2b = true;
                 }
             }
         }

@@ -240,6 +240,10 @@ public class Utilities {
         public static final int SIP_LOGOUT                = 3;
         public static final int SECURITY_REKEY_FAILED     = 4;
         public static final int SECURITY_STOP             = 5;
+
+        // TODO: Sync this defined with ImsCM? Now use the same unsolicited code value as
+        //       SECURITY_REKEY_FAILED to start the normal attach without VOWIFI_UNAVAILABLE.
+        public static final int SOS_FAILED = SECURITY_REKEY_FAILED;
     }
 
     public static class CallType {
@@ -641,6 +645,21 @@ public class Utilities {
         public static final int CATEGORY_VALUE_MARINE = 8;
         public static final int CATEGORY_VALUE_MOUNTAIN = 16;
 
+        public static boolean isRealEmergencyNumber(Context context, String phoneNumber) {
+            if (context == null || TextUtils.isEmpty(phoneNumber)) {
+                return false;
+            }
+
+            String realEccList = Settings.Global.getString(context.getContentResolver(),
+                    "ecc_list_real" + getPrimaryCard(context));
+            if (TextUtils.isEmpty(realEccList)) {
+                return false;
+            }
+
+            HashMap<String, String> eccList = parserEccList(realEccList);
+            return eccList.containsKey(phoneNumber);
+        }
+
         /**
          * byte to inverted bit
          */
@@ -677,8 +696,8 @@ public class Utilities {
             for (String eccNumber : eccNumbers) {
                 String[] eccInfo = eccNumber.split("@");
                 if (eccInfo.length != 2) {
-                    Log.w(TAG, "The current ecc info as this: " + eccNumber + ". INVALID!!!");
-                    continue;
+                    Log.w(TAG, "The current ecc number is: " + eccNumber + ". INVALID category!");
+                    eccListMap.put(eccNumber, EMUtils.DEFAULT_EMERGENCY_SERVICE_URN);
                 } else {
                     String urn = EMUtils.getEmergencyCallUrn(eccInfo[1]);
                     eccListMap.put(eccInfo[0], urn);
@@ -1428,7 +1447,7 @@ public class Utilities {
          *     Native - please update the second version number.
          *     Others - please update the third version number.
          */
-        public static final String NUMBER = "1.0.4";
+        public static final String NUMBER = "1.0.5";
 
         /**
          * Old detail as this:
@@ -1436,8 +1455,9 @@ public class Utilities {
          * 1.0.1[Get the urn from DB if there isn't category info.]
          * 1.0.2[Support require CNI when vowifi register.]
          * 1.0.3[Get sms Tp-Mr from SIM, and sync SS after register.]
+         * 1.0.4[Delay 500ms to handle the hold failed.]
          */
-        public static final String DETAIL = "Delay 500ms to handle the hold failed.";
+        public static final String DETAIL = "Handle the EM call with whole step. (PANI to PCNI)";
 
         public static String getVersionInfo() {
             return NUMBER + "[" + DETAIL + "]";
