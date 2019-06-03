@@ -677,12 +677,12 @@ public class ImsUtImpl extends IImsUt.Stub {
      * Retrieves the configuration of the call waiting.
      */
     @Override
-    public int queryCallWaiting(){
+    public int queryCallWaiting() {
         int id = getReuestId();
         Bundle bundle = new Bundle();
         bundle.putInt(EXTRA_ACTION, ACTION_QUERY_CW);
         bundle.putInt(EXTRA_ID, id);
-        bundle.putInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
+        bundle.putInt(EXTRA_SERVICE_CLASS, (CommandsInterface.SERVICE_CLASS_VOICE | CommandsInterface.SERVICE_CLASS_DATA | CommandsInterface.SERVICE_CLASS_FAX));
         requestNetwork(bundle);
         return id;
     }
@@ -807,7 +807,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         bundle.putInt(EXTRA_ACTION, ACTION_UPDATE_CW);
         bundle.putInt(EXTRA_ID, id);
         bundle.putBoolean(EXTRA_LOCK_STATE, enable);
-        bundle.putInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
+        bundle.putInt(EXTRA_SERVICE_CLASS, (CommandsInterface.SERVICE_CLASS_VOICE | CommandsInterface.SERVICE_CLASS_DATA | CommandsInterface.SERVICE_CLASS_FAX));
         requestNetwork(bundle);
         return id;
     }
