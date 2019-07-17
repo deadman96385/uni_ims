@@ -10,7 +10,7 @@
 <string name="vowifi_remove_video_success">"Repli d\'appel vidéo"</string>
 <string name="vowifi_hold_success">"Maintien réussi"</string>
 <string name="vowifi_hold_fail">"Échec du maintien"</string>
-<string name="vowifi_resume_success">"Reprise réussi"</string>
+<string name="vowifi_resume_success">"Reprise réussie"</string>
 <string name="vowifi_resume_fail">"Échec de la reprise"</string>
 <string name="vowifi_call_retry">"Veuillez réessayer dans quelques instants"</string>
 <string name="vowifi_call_is_focus">"Ajouter à la conférence"</string>
